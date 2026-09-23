@@ -1,0 +1,82 @@
+import type { AppState } from './types';
+
+export const DEMO_STATE: AppState = {
+  usuarios: [
+    {
+      id: 'u-admin',
+      email: 'admin@empresa.com',
+      nombre: 'Administrador',
+      rol: 'editor',
+      password: 'admin123',
+    },
+    {
+      id: 'u-ana',
+      email: 'ana@empresa.com',
+      nombre: 'Ana García',
+      rol: 'lector',
+      password: 'ana123',
+    },
+  ],
+  generadores: [
+    {
+      id: 'g-101',
+      codigo: 'G-101',
+      modelo: 'Caterpillar 312D',
+      ubicacion: 'Oficina',
+      estado: 'estable',
+    },
+    {
+      id: 'g-204',
+      codigo: 'G-204',
+      modelo: 'Volvo 440',
+      ubicacion: 'Barcelona Norte',
+      estado: 'en-transito',
+    },
+    {
+      id: 'g-315',
+      codigo: 'G-315',
+      modelo: 'Kubota V3300',
+      ubicacion: 'Taller',
+      estado: 'en-oficina',
+    },
+  ],
+  movimientos: [
+    {
+      id: 'm-001',
+      generador_id: 'g-101',
+      fecha: '2026-09-24',
+      origen: 'Oficina',
+      destino: 'Barcelona Norte',
+      tipo_transporte: 'Propio',
+      estado: 'pendiente',
+      usuario: 'Administrador',
+      creado_en: '2026-09-23T08:00:00.000Z',
+    },
+    {
+      id: 'm-002',
+      generador_id: 'g-204',
+      fecha: '2026-09-25',
+      origen: 'Taller',
+      destino: 'Puerto',
+      tipo_transporte: 'Local',
+      estado: 'pendiente',
+      usuario: 'Administrador',
+      creado_en: '2026-09-23T09:10:00.000Z',
+    },
+    {
+      id: 'm-003',
+      generador_id: 'g-315',
+      fecha: '2026-09-22',
+      origen: 'Oficina',
+      destino: 'Barcelona Este',
+      tipo_transporte: 'Nacex',
+      estado: 'completado',
+      usuario: 'Administrador',
+      creado_en: '2026-09-20T12:00:00.000Z',
+      completado_en: '2026-09-22T16:45:00.000Z',
+    },
+  ],
+  ubicaciones: ['Oficina', 'Taller', 'Puerto', 'Barcelona Norte', 'Barcelona Este', 'Mataró'],
+  destinatarios: ['jefe@empresa.com', 'operaciones@empresa.com'],
+  me: null,
+};

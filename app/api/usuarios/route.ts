@@ -1,0 +1,43 @@
+import { NextResponse } from 'next/server';
+import { getStore, setStore } from '@/app/lib/store';
+
+export async function POST(request: Request) {
+  const body = await request.json().catch(() => ({}));
+  const email = String(body.email ?? '').trim();
+  const nombre = String(body.nombre ?? '').trim();
+  const password = String(body.password ?? '').trim();
+  const rol = String(body.rol ?? 'editor');
+
+  if (!email || !nombre) {
+    return NextResponse.json({ error: 'Nombre y email válidos son obligatorios.' }, { status: 400 });
+  }
+
+  const state = getStore();
+  const normalizedRole = rol === 'editor' || rol === 'lector' ? (rol as 'editor' | 'lector') : 'editor';
+  const existing = state.usuarios.find((user) => user.email.toLowerCase() === email.toLowerCase());
+
+  const nextUsers = existing
+    ? state.usuarios.map((user) =>
+        user.email.toLowerCase() === email.toLowerCase()
+          ? {
+              ...user,
+              nombre,
+              rol: normalizedRole,
+              password: password || user.password,
+            }
+          : user,
+      )
+    : [
+        ...state.usuarios,
+        {
+          id: `u-${Date.now()}`,
+          email,
+          nombre,
+          rol: normalizedRole,
+          password: password || 'temporal123',
+        },
+      ];
+
+  setStore({ ...state, usuarios: nextUsers });
+  return NextResponse.json({ ok: true, usuarios: nextUsers });
+}
