@@ -3,7 +3,7 @@ import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore, setStore } from '@/app/lib/store';
 
 export async function POST(request: Request) {
-  if (!getEditorFromRequest(request)) {
+  if (!(await getEditorFromRequest(request))) {
     return NextResponse.json({ error: 'Necesitas una sesión de editor.' }, { status: 403 });
   }
 
@@ -14,11 +14,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Email no válido.' }, { status: 400 });
   }
 
-  const state = getStore();
+  const state = await getStore();
   const nextList = state.destinatarios.includes(email)
     ? state.destinatarios
     : [...state.destinatarios, email];
 
-  setStore({ ...state, destinatarios: nextList });
+  await setStore({ ...state, destinatarios: nextList });
   return NextResponse.json({ ok: true, destinatarios: nextList });
 }

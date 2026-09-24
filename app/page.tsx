@@ -13,7 +13,6 @@ interface User {
   email: string;
   nombre: string;
   rol: Role;
-  password?: string;
 }
 
 interface Generator {
@@ -338,7 +337,7 @@ export default function Page() {
     try {
       await api('/api/usuarios', {
         method: 'POST',
-        body: JSON.stringify({ email, nombre: user.nombre, rol, password: user.password ?? 'temporal123' }),
+        body: JSON.stringify({ email, nombre: user.nombre, rol }),
       });
       await refresh();
     } catch (error) {

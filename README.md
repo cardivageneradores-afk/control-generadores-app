@@ -1,118 +1,63 @@
 # Control de generadores
 
-Aplicación empresarial para gestionar generadores, movimientos, permisos y envío de resúmenes por email.
+Aplicación Next.js para gestionar generadores, movimientos, usuarios y resúmenes por email. La persistencia de producción usa Supabase desde el servidor; nunca se envía la service role key al navegador.
 
-## Stack recomendado
+## Desarrollo local
 
-- Next.js + TypeScript
-- Supabase para autenticación, usuarios y base de datos
-- Resend para envío de emails
-- Vercel para despliegue
-
-## Cómo probarla desde GitHub
-
-GitHub no ejecuta la app web de forma pública por sí solo. Para probarla en internet debes usar un hosting como Vercel o Cloudflare Pages. GitHub sí puede alojar el código y ejecutar validaciones automáticas.
-
-### Opción 1: probar localmente desde el repositorio
-
-1. Clona el repositorio.
-2. Copia `.env.example` a `.env.local`.
-3. Instala dependencias: `npm install`
-4. Ejecuta: `npm run dev`
-5. Abre: `http://localhost:3000`
-
-### Opción 2: probar en internet con Vercel
-
-1. Conecta este repositorio a Vercel.
-2. Añade las variables del entorno:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `RESEND_API_KEY`
-   - `NEXT_PUBLIC_APP_URL`
-   - `SESSION_SECRET` (secreto aleatorio de al menos 32 caracteres; no lo compartas)
-3. Despliega desde GitHub.
-4. Vercel te entregará una URL pública para probarla.
-
-### Opción 3: validación automática en GitHub
-
-Este repositorio incluye un workflow de CI en `.github/workflows/ci.yml` que valida:
-- `npm ci`
-- `npm run lint`
-- `npm run build`
-
-## Inicio rápido local
-
-1. Instala dependencias:
-   npm install
-2. Copia el fichero `.env.example` a `.env.local` y rellena tus claves reales.
-3. Ejecuta la app:
-   npm run dev
-4. Abre `http://localhost:3000`
-
-Credenciales demo por defecto:
-- Email: `admin@empresa.com`
-- Contraseña: `admin123`
-
-## Sesiones y seguridad
-
-El login crea una cookie `httpOnly`, `SameSite=Lax` y `Secure` en producción. Su contenido es un token firmado con HMAC-SHA-256 mediante `SESSION_SECRET`; solo contiene el identificador de usuario y una fecha de expiración, nunca la contraseña. Cada ruta API valida la firma y busca el usuario antes de devolver el estado o ejecutar una acción. Logout revoca la cookie en el navegador.
-
-Configura `SESSION_SECRET` en Vercel y en `.env.local` con un valor aleatorio de al menos 32 caracteres. El valor debe ser el mismo entre despliegues que deban aceptar las sesiones existentes. Si falta o es demasiado corta, el endpoint de login devuelve un error 503 explícito de configuración (nunca un 500); no se usa un secreto por defecto en producción.
-
-## Cómo funcionan los emails
-
-La acción de enviar resumen por email se realiza desde la API del backend (`/api/enviar-resumen`).
-
-- La app toma la lista de destinatarios guardada en la base de datos.
-- Genera un texto HTML y texto plano con el resumen semanal.
-- Envía el email usando Resend.
-- Si no hay una API key configurada, la app simula el envío para que puedas probar la lógica sin romper el flujo.
-
-## Base de datos recomendada en Supabase
-
-Crea estas tablas:
-
-```sql
-create table public.generadores (
-  id uuid primary key default gen_random_uuid(),
-  codigo text not null,
-  modelo text,
-  ubicacion text not null default 'Oficina',
-  estado text not null default 'en-oficina',
-  created_at timestamptz not null default now()
-);
-
-create table public.movimientos (
-  id uuid primary key default gen_random_uuid(),
-  generador_id uuid references public.generadores(id) on delete cascade,
-  fecha date not null,
-  origen text not null,
-  destino text not null,
-  tipo_transporte text not null default 'Propio',
-  estado text not null default 'pendiente',
-  notas text,
-  usuario text,
-  created_at timestamptz not null default now(),
-  completado_en timestamptz
-);
-
-create table public.destinatarios (
-  id uuid primary key default gen_random_uuid(),
-  email text not null unique,
-  created_at timestamptz not null default now()
-);
+```bash
+npm ci
+cp .env.example .env.local
+npm run dev
 ```
 
-## Despliegue
+Sin credenciales, el fallback solo funciona si `NODE_ENV` no es `production` y se activan explícitamente `ALLOW_DEMO_DATA=true` y, para simular email, `ALLOW_DEMO_EMAIL=true`. El login demo es `admin@empresa.com` / `admin123`. No actives esos flags en producción.
 
-- Frontend: Vercel
-- Base de datos y auth: Supabase
-- Emails: Resend
+## Supabase
 
-Crea un proyecto en Supabase, conecta la app con tus variables de entorno y despliega en Vercel conectando el repo de GitHub.
+1. Crea un proyecto en [Supabase](https://supabase.com/).
+2. En **Project Settings > API**, copia la **Project URL** a `NEXT_PUBLIC_SUPABASE_URL` y la clave **service_role** a `SUPABASE_SERVICE_ROLE_KEY`. La service role key es solo servidor.
+3. Ejecuta `supabase/migrations/20260924214000_initial_schema.sql` en **SQL Editor**, o usa la CLI:
 
-## Notas de producción
+   ```bash
+   npx supabase link --project-ref <project-ref>
+   npx supabase db push
+   ```
 
-- La sesión ya no depende de la memoria de una instancia serverless, pero el estado de la aplicación (destinatarios, generadores y movimientos) sigue siendo temporal en memoria y debe migrarse a Supabase antes de considerarse persistente en producción.
-- La autenticación de esta versión es el flujo demo firmado; Supabase Auth y la persistencia de datos quedan pendientes.
+4. Crea el primer usuario generando un hash scrypt (nunca guardes la contraseña en claro). Por ejemplo, desde la raíz del repositorio:
+
+   ```bash
+   node -e "const c=require('crypto'); const s=c.randomBytes(16).toString('hex'); c.scrypt('CAMBIA_ESTA_PASSWORD',s,64,(e,k)=>console.log('scrypt$'+s+'$'+k.toString('hex')))"
+   ```
+
+   Inserta el resultado en SQL Editor:
+
+   ```sql
+   insert into public.usuarios (email, nombre, rol, password_hash)
+   values ('admin@tu-dominio.com', 'Administrador', 'editor', 'scrypt$<salt>$<hash>');
+   ```
+5. Define un `SESSION_SECRET` aleatorio de al menos 32 caracteres. La sesión es una cookie httpOnly firmada y cada request vuelve a validar el usuario y su rol en Supabase.
+
+La app usa cuatro tablas (`usuarios`, `generadores`, `movimientos`, `destinatarios`) y RLS activado. Las rutas API acceden mediante `SUPABASE_SERVICE_ROLE_KEY`; no se crean políticas anónimas permisivas.
+
+## Resend
+
+1. Crea una API key en [Resend](https://resend.com/).
+2. Verifica el dominio remitente en **Domains**.
+3. Define `RESEND_API_KEY` y `RESEND_FROM_EMAIL`, por ejemplo `Control Generadores <no-reply@tu-dominio.com>`.
+4. Añade destinatarios desde la interfaz. En producción no se usa ningún destinatario implícito y el envío falla explícitamente si falta configuración.
+
+## Vercel
+
+1. Importa el repositorio en Vercel.
+2. En **Project Settings > Environment Variables**, configura `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SESSION_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` y `NEXT_PUBLIC_APP_URL` para Production (y Preview si procede).
+3. Mantén `ALLOW_DEMO_DATA` y `ALLOW_DEMO_EMAIL` sin definir o en `false`.
+4. Despliega. CI ejecuta `npm ci`, lint y build mediante `.github/workflows/ci.yml`.
+
+## Validación
+
+```bash
+npm run lint
+npm run build
+```
+
+La app devuelve `503` si falta la configuración de sesión o persistencia en un entorno no-demo, en vez de ocultar el problema con datos en memoria.

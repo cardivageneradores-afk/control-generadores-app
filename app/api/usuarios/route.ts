@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore, setStore } from '@/app/lib/store';
+import { hashPassword } from '@/app/lib/password';
 
 export async function POST(request: Request) {
-  if (!getEditorFromRequest(request)) {
+  if (!(await getEditorFromRequest(request))) {
     return NextResponse.json({ error: 'Necesitas una sesión de editor.' }, { status: 403 });
   }
 
@@ -17,10 +18,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Nombre y email válidos son obligatorios.' }, { status: 400 });
   }
 
-  const state = getStore();
+  const state = await getStore();
   const normalizedRole = rol === 'editor' || rol === 'lector' ? (rol as 'editor' | 'lector') : 'editor';
   const existing = state.usuarios.find((user) => user.email.toLowerCase() === email.toLowerCase());
 
+  const passwordHash = password ? await hashPassword(password) : null;
   const nextUsers = existing
     ? state.usuarios.map((user) =>
         user.email.toLowerCase() === email.toLowerCase()
@@ -28,7 +30,7 @@ export async function POST(request: Request) {
               ...user,
               nombre,
               rol: normalizedRole,
-              password: password || user.password,
+              passwordHash: passwordHash ?? user.passwordHash,
             }
           : user,
       )
@@ -39,13 +41,16 @@ export async function POST(request: Request) {
           email,
           nombre,
           rol: normalizedRole,
-          password: password || 'temporal123',
+          passwordHash: passwordHash ?? '',
         },
       ];
 
-  setStore({ ...state, usuarios: nextUsers });
+  if (!existing && !passwordHash) {
+    return NextResponse.json({ error: 'La contraseña es obligatoria para usuarios nuevos.' }, { status: 400 });
+  }
+  await setStore({ ...state, usuarios: nextUsers });
   return NextResponse.json({
     ok: true,
-    usuarios: nextUsers.map(({ password: _password, ...user }) => user),
+    usuarios: nextUsers.map(({ passwordHash: _passwordHash, ...user }) => user),
   });
 }

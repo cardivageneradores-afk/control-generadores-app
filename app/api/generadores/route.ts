@@ -3,7 +3,7 @@ import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore, setStore } from '@/app/lib/store';
 
 export async function POST(request: Request) {
-  if (!getEditorFromRequest(request)) {
+  if (!(await getEditorFromRequest(request))) {
     return NextResponse.json({ error: 'Necesitas una sesión de editor.' }, { status: 403 });
   }
 
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Indica al menos el código del generador.' }, { status: 400 });
   }
 
-  const state = getStore();
+  const state = await getStore();
   const normalizedState =
     estado === 'estable' || estado === 'en-oficina' || estado === 'en-transito'
       ? (estado as 'estable' | 'en-oficina' | 'en-transito')
@@ -37,6 +37,6 @@ export async function POST(request: Request) {
     ],
   };
 
-  setStore(nextState);
+  await setStore(nextState);
   return NextResponse.json({ ok: true, generador: nextState.generadores[nextState.generadores.length - 1] });
 }

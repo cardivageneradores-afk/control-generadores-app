@@ -11,12 +11,15 @@ function formatDate(date: string) {
 }
 
 export async function POST(request: Request) {
-  if (!getEditorFromRequest(request)) {
+  if (!(await getEditorFromRequest(request))) {
     return NextResponse.json({ error: 'Necesitas una sesión de editor.' }, { status: 403 });
   }
 
-  const state = getStore();
-  const recipients = state.destinatarios.length ? state.destinatarios : ['admin@empresa.com'];
+  const state = await getStore();
+  if (!state.destinatarios.length) {
+    return NextResponse.json({ error: 'Configura al menos un destinatario antes de enviar el resumen.' }, { status: 400 });
+  }
+  const recipients = state.destinatarios;
 
   const text = ['Resumen de movimientos:', ...state.movimientos.map((m) => {
     const generator = state.generadores.find((g) => g.id === m.generador_id);

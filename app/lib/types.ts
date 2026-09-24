@@ -8,7 +8,7 @@ export interface User {
   email: string;
   nombre: string;
   rol: UserRole;
-  password: string;
+  passwordHash: string;
 }
 
 export interface Generator {

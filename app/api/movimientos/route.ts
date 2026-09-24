@@ -3,7 +3,7 @@ import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore, setStore } from '@/app/lib/store';
 
 export async function POST(request: Request) {
-  const editor = getEditorFromRequest(request);
+  const editor = await getEditorFromRequest(request);
   if (!editor) {
     return NextResponse.json({ error: 'Necesitas una sesión de editor.' }, { status: 403 });
   }
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Completa generador, fecha, origen y destino.' }, { status: 400 });
   }
 
-  const state = getStore();
+  const state = await getStore();
   const normalizedType =
     tipoTransporte === 'Propio' || tipoTransporte === 'Local' || tipoTransporte === 'Nacex'
       ? (tipoTransporte as 'Propio' | 'Local' | 'Nacex')
@@ -45,6 +45,6 @@ export async function POST(request: Request) {
     ],
   };
 
-  setStore(next);
+  await setStore(next);
   return NextResponse.json({ ok: true, movimiento: next.movimientos[next.movimientos.length - 1] });
 }

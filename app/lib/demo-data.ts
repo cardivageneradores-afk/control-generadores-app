@@ -7,14 +7,14 @@ export const DEMO_STATE: AppState = {
       email: 'admin@empresa.com',
       nombre: 'Administrador',
       rol: 'editor',
-      password: 'admin123',
+      passwordHash: 'scrypt$6f6bd27805bfcd18f43fb570d0fc0607$cbe18fc7e94cdfb692ac130e74dcea2775cf83e8f7c4dfa31a1015de8c0b2d940eceac9e3ae46a177733a058cf7aede7bc0b9181525dbd95e5a41bd1847797ec',
     },
     {
       id: 'u-ana',
       email: 'ana@empresa.com',
       nombre: 'Ana García',
       rol: 'lector',
-      password: 'ana123',
+      passwordHash: 'scrypt$ba37119c171fceffd544cc05825a12ad$b05f95d50262240a284220d9e00594f55227f4a7903a042bce75a830f629184eb4f34987d0232f150afabd109cda9a5fe99c8abe51afe0b0a1604c2bbfdce5fc',
     },
   ],
   generadores: [

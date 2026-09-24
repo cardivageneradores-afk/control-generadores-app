@@ -3,14 +3,14 @@ import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore, setStore } from '@/app/lib/store';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!getEditorFromRequest(request)) {
+  if (!(await getEditorFromRequest(request))) {
     return NextResponse.json({ error: 'Necesitas una sesión de editor.' }, { status: 403 });
   }
 
   const body = await request.json().catch(() => ({}));
   const { id } = await params;
 
-  const state = getStore();
+  const state = await getStore();
   const edited = state.movimientos.find((movement) => movement.id === id);
 
   if (!edited) {
@@ -42,6 +42,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }),
   };
 
-  setStore(next);
+  await setStore(next);
   return NextResponse.json({ ok: true, movimiento: next.movimientos.find((movement) => movement.id === id) });
 }
