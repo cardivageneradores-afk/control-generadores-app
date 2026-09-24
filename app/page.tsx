@@ -111,7 +111,6 @@ function transportClass(type: TransportType) {
 
 export default function Page() {
   const [state, setState] = useState<AppState>(initialState);
-  const [showLogin, setShowLogin] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
   const [showRecipients, setShowRecipients] = useState(false);
   const [showMoveModal, setShowMoveModal] = useState(false);
@@ -151,9 +150,8 @@ export default function Page() {
     try {
       const data = await api<AppState>('/api/state');
       setState({ ...initialState, ...data, me: data.me ?? null });
-      setShowLogin(false);
     } catch {
-      setShowLogin(true);
+      setState((current) => ({ ...current, me: null }));
     }
   };
 
@@ -300,7 +298,6 @@ export default function Page() {
         body: JSON.stringify(login),
       });
       setState((current) => ({ ...current, me: result.me }));
-      setShowLogin(false);
       setLoginError('');
       setToast('Sesión iniciada.');
       await refresh();
@@ -312,7 +309,6 @@ export default function Page() {
   const doLogout = async () => {
     await api('/api/logout', { method: 'POST' });
     setState((current) => ({ ...current, me: null }));
-    setShowLogin(true);
     setToast('Has salido.');
   };
 
@@ -418,7 +414,7 @@ export default function Page() {
 
   return (
     <>
-      {!state.me && !showLogin ? (
+      {!state.me ? (
         <div className="login-shell">
           <div className="login-box">
             <h3>Control de generadores</h3>
@@ -445,7 +441,7 @@ export default function Page() {
         </div>
       ) : null}
 
-      {state.me || showLogin ? (
+      {state.me ? (
         <div className="app-shell">
           <header className="topbar">
             <div>
