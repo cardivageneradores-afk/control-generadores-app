@@ -584,7 +584,9 @@ export default function Page() {
                   <div key={`${generator.id}-code`} className="calendar-cell row-label">{generator.codigo}</div>
                   {weekDates.map((date) => {
                     const iso = isoDate(date);
-                    const movement = state.movimientos.find((item) => item.generador_id === generator.id && item.fecha === iso);
+                    const movement = state.movimientos.find(
+                      (item) => item.generador_id === generator.id && item.fecha === iso && item.estado === 'pendiente',
+                    );
                     return movement ? (
                       <div key={`${generator.id}-${iso}`} className={`calendar-cell movement ${movement.tipo_transporte === 'Propio' ? 'own' : movement.tipo_transporte === 'Local' ? 'local' : 'nacex'}`} title={`${movement.origen} → ${movement.destino}`}>
                         {movement.origen} → {movement.destino}
