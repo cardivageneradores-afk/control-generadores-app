@@ -1,8 +1,18 @@
 import { NextResponse } from 'next/server';
-import { createSessionToken, SESSION_COOKIE_NAME, sessionCookieOptions } from '@/app/lib/auth';
+import {
+  createSessionToken,
+  getSessionConfigurationError,
+  SESSION_COOKIE_NAME,
+  sessionCookieOptions,
+} from '@/app/lib/auth';
 import { getStore } from '@/app/lib/store';
 
 export async function POST(request: Request) {
+  const configurationError = getSessionConfigurationError();
+  if (configurationError) {
+    return NextResponse.json({ error: configurationError }, { status: 503 });
+  }
+
   const body = await request.json().catch(() => ({}));
   const email = String(body.email ?? '').trim().toLowerCase();
   const password = String(body.password ?? '');

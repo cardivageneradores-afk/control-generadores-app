@@ -58,7 +58,7 @@ Credenciales demo por defecto:
 
 El login crea una cookie `httpOnly`, `SameSite=Lax` y `Secure` en producción. Su contenido es un token firmado con HMAC-SHA-256 mediante `SESSION_SECRET`; solo contiene el identificador de usuario y una fecha de expiración, nunca la contraseña. Cada ruta API valida la firma y busca el usuario antes de devolver el estado o ejecutar una acción. Logout revoca la cookie en el navegador.
 
-Configura `SESSION_SECRET` en Vercel y en `.env.local` con un valor aleatorio de al menos 32 caracteres. El valor debe ser el mismo entre despliegues que deban aceptar las sesiones existentes.
+Configura `SESSION_SECRET` en Vercel y en `.env.local` con un valor aleatorio de al menos 32 caracteres. El valor debe ser el mismo entre despliegues que deban aceptar las sesiones existentes. Si falta o es demasiado corta, el endpoint de login devuelve un error 503 explícito de configuración (nunca un 500); no se usa un secreto por defecto en producción.
 
 ## Cómo funcionan los emails
 

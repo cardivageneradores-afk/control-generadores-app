@@ -4,18 +4,23 @@ import type { User } from './types';
 
 export const SESSION_COOKIE_NAME = 'control_generadores_session';
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
+const MIN_SESSION_SECRET_LENGTH = 32;
+const SESSION_SECRET_ERROR = 'SESSION_SECRET debe tener al menos 32 caracteres. Configúrala en Vercel.';
 
 interface SessionPayload {
   sub: string;
   exp: number;
 }
 
-function getSessionSecret() {
+export function getSessionConfigurationError() {
   const secret = process.env.SESSION_SECRET;
-  if (!secret || secret.length < 32) {
-    throw new Error('SESSION_SECRET debe tener al menos 32 caracteres.');
-  }
-  return secret;
+  return secret && secret.length >= MIN_SESSION_SECRET_LENGTH ? null : SESSION_SECRET_ERROR;
+}
+
+function getSessionSecret() {
+  const error = getSessionConfigurationError();
+  if (error) throw new Error(error);
+  return process.env.SESSION_SECRET as string;
 }
 
 function encode(value: string) {
@@ -27,9 +32,13 @@ function sign(value: string) {
 }
 
 function verifySignature(value: string, signature: string) {
-  const expected = Buffer.from(sign(value), 'base64url');
-  const received = Buffer.from(signature, 'base64url');
-  return expected.length === received.length && timingSafeEqual(expected, received);
+  try {
+    const expected = Buffer.from(sign(value), 'base64url');
+    const received = Buffer.from(signature, 'base64url');
+    return expected.length === received.length && timingSafeEqual(expected, received);
+  } catch {
+    return false;
+  }
 }
 
 function getCookieValue(request: Request) {
