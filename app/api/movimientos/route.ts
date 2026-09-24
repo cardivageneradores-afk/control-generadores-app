@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
+import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore, setStore } from '@/app/lib/store';
 
 export async function POST(request: Request) {
+  const editor = getEditorFromRequest(request);
+  if (!editor) {
+    return NextResponse.json({ error: 'Necesitas una sesión de editor.' }, { status: 403 });
+  }
+
   const body = await request.json().catch(() => ({}));
   const generadorId = String(body.generadorId ?? '');
   const fecha = String(body.fecha ?? '');
@@ -33,7 +39,7 @@ export async function POST(request: Request) {
         tipo_transporte: normalizedType,
         notas: notas || undefined,
         estado: 'pendiente' as const,
-        usuario: state.me?.nombre ?? 'Sistema',
+        usuario: editor.nombre,
         creado_en: new Date().toISOString(),
       },
     ],

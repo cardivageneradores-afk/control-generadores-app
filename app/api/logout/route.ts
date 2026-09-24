@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { setCurrentUser } from '@/app/lib/store';
+import { clearSessionCookieOptions, SESSION_COOKIE_NAME } from '@/app/lib/auth';
 
 export async function POST() {
-  setCurrentUser(null);
-  return NextResponse.json({ ok: true });
+  const response = NextResponse.json({ ok: true });
+  response.cookies.set(SESSION_COOKIE_NAME, '', clearSessionCookieOptions());
+  return response;
 }

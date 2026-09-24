@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
+import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore, setStore } from '@/app/lib/store';
 
 export async function POST(request: Request) {
+  if (!getEditorFromRequest(request)) {
+    return NextResponse.json({ error: 'Necesitas una sesión de editor.' }, { status: 403 });
+  }
+
   const body = await request.json().catch(() => ({}));
   const email = String(body.email ?? '').trim();
   const nombre = String(body.nombre ?? '').trim();
@@ -39,5 +44,8 @@ export async function POST(request: Request) {
       ];
 
   setStore({ ...state, usuarios: nextUsers });
-  return NextResponse.json({ ok: true, usuarios: nextUsers });
+  return NextResponse.json({
+    ok: true,
+    usuarios: nextUsers.map(({ password: _password, ...user }) => user),
+  });
 }

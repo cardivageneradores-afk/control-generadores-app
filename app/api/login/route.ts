@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getStore, setCurrentUser } from '@/app/lib/store';
+import { createSessionToken, SESSION_COOKIE_NAME, sessionCookieOptions } from '@/app/lib/auth';
+import { getStore } from '@/app/lib/store';
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Email o contraseña incorrectos.' }, { status: 401 });
   }
 
-  setCurrentUser(user);
-  return NextResponse.json({ ok: true, me: { ...user, password: undefined } });
+  const response = NextResponse.json({ ok: true, me: { id: user.id, email: user.email, nombre: user.nombre, rol: user.rol } });
+  response.cookies.set(SESSION_COOKIE_NAME, createSessionToken(user), sessionCookieOptions());
+  return response;
 }

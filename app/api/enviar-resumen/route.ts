@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore } from '@/app/lib/store';
 import { sendSummaryEmail } from '@/app/lib/email';
 
@@ -9,7 +10,11 @@ function formatDate(date: string) {
   });
 }
 
-export async function POST() {
+export async function POST(request: Request) {
+  if (!getEditorFromRequest(request)) {
+    return NextResponse.json({ error: 'Necesitas una sesión de editor.' }, { status: 403 });
+  }
+
   const state = getStore();
   const recipients = state.destinatarios.length ? state.destinatarios : ['admin@empresa.com'];
 

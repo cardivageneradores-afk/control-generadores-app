@@ -30,6 +30,7 @@ GitHub no ejecuta la app web de forma pública por sí solo. Para probarla en in
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `RESEND_API_KEY`
    - `NEXT_PUBLIC_APP_URL`
+   - `SESSION_SECRET` (secreto aleatorio de al menos 32 caracteres; no lo compartas)
 3. Despliega desde GitHub.
 4. Vercel te entregará una URL pública para probarla.
 
@@ -52,6 +53,12 @@ Este repositorio incluye un workflow de CI en `.github/workflows/ci.yml` que val
 Credenciales demo por defecto:
 - Email: `admin@empresa.com`
 - Contraseña: `admin123`
+
+## Sesiones y seguridad
+
+El login crea una cookie `httpOnly`, `SameSite=Lax` y `Secure` en producción. Su contenido es un token firmado con HMAC-SHA-256 mediante `SESSION_SECRET`; solo contiene el identificador de usuario y una fecha de expiración, nunca la contraseña. Cada ruta API valida la firma y busca el usuario antes de devolver el estado o ejecutar una acción. Logout revoca la cookie en el navegador.
+
+Configura `SESSION_SECRET` en Vercel y en `.env.local` con un valor aleatorio de al menos 32 caracteres. El valor debe ser el mismo entre despliegues que deban aceptar las sesiones existentes.
 
 ## Cómo funcionan los emails
 
@@ -107,6 +114,5 @@ Crea un proyecto en Supabase, conecta la app con tus variables de entorno y desp
 
 ## Notas de producción
 
-- Sustituye el almacenamiento en memoria actual por tablas reales en Supabase.
-- Añade middleware para proteger rutas y roles.
-- Reemplaza el flujo demo por acceso real con autenticación segura de Supabase Auth.
+- La sesión ya no depende de la memoria de una instancia serverless, pero el estado de la aplicación (destinatarios, generadores y movimientos) sigue siendo temporal en memoria y debe migrarse a Supabase antes de considerarse persistente en producción.
+- La autenticación de esta versión es el flujo demo firmado; Supabase Auth y la persistencia de datos quedan pendientes.
