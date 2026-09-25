@@ -5,6 +5,7 @@ import {
   classifySupabaseFailure,
   getPersistenceConfigurationError,
   getSupabaseConfigurationStatus,
+  getSupabaseFailureMetadata,
   supabaseAdmin,
 } from '@/app/lib/supabase';
 import {
@@ -29,8 +30,10 @@ function diagnosticResponse(
   diagnostic: SetupDiagnostic,
   error: string,
   status: 500 | 503,
+  failure?: unknown,
 ) {
-  console.error(`[setup] ${diagnostic}`);
+  const metadata = failure ? getSupabaseFailureMetadata(failure) : {};
+  console.error(`[setup] ${diagnostic}`, metadata);
   return NextResponse.json({ available: false, error, diagnostic }, { status });
 }
 
@@ -67,6 +70,7 @@ export async function GET() {
         'SETUP_SUPABASE_CREDENTIALS_INVALID',
         'Las credenciales de Supabase no son válidas.',
         503,
+        error,
       );
     }
     if (failureKind === 'schema') {
@@ -74,12 +78,22 @@ export async function GET() {
         'SETUP_SUPABASE_SCHEMA_MISSING',
         'Falta la tabla o migración necesaria en Supabase.',
         503,
+        error,
+      );
+    }
+    if (failureKind === 'configuration') {
+      return diagnosticResponse(
+        'SETUP_CONFIG_INVALID',
+        'No se pudo conectar con Supabase. Revisa la URL y el despliegue.',
+        503,
+        error,
       );
     }
     return diagnosticResponse(
       'SETUP_SUPABASE_UNKNOWN',
       'No se pudo comprobar la configuración de Supabase.',
       500,
+      error,
     );
   }
 }
@@ -117,7 +131,7 @@ export async function POST(request: Request) {
       if (error.message.includes('bootstrap_already_completed')) {
         return NextResponse.json({ error: 'El alta inicial ya se ha completado.' }, { status: 409 });
       }
-      throw new Error(`Error creando el administrador: ${error.message}`);
+      throw error;
     }
     return NextResponse.json({ ok: true });
   } catch (error) {
@@ -127,6 +141,7 @@ export async function POST(request: Request) {
         'SETUP_SUPABASE_CREDENTIALS_INVALID',
         'Las credenciales de Supabase no son válidas.',
         503,
+        error,
       );
     }
     if (failureKind === 'schema') {
@@ -134,9 +149,18 @@ export async function POST(request: Request) {
         'SETUP_SUPABASE_SCHEMA_MISSING',
         'Falta la tabla o migración necesaria en Supabase.',
         503,
+        error,
       );
     }
-    console.error('[setup] SETUP_SUPABASE_UNKNOWN');
+    if (failureKind === 'configuration') {
+      return diagnosticResponse(
+        'SETUP_CONFIG_INVALID',
+        'No se pudo conectar con Supabase. Revisa la URL y el despliegue.',
+        503,
+        error,
+      );
+    }
+    console.error('[setup] SETUP_SUPABASE_UNKNOWN', getSupabaseFailureMetadata(error));
     return NextResponse.json({ error: 'No se pudo completar el alta inicial.' }, { status: 500 });
   }
 }
