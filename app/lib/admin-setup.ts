@@ -47,6 +47,6 @@ export function isRateLimited(ip: string) {
 export async function isAdminSetupAvailable() {
   if (!supabaseAdmin || !hasAdminSetupToken()) return false;
   const { data, error } = await supabaseAdmin.from('usuarios').select('id').limit(1);
-  if (error) throw new Error(`Error comprobando usuarios: ${error.message}`);
+  if (error) throw error;
   return data.length === 0;
 }
