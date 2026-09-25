@@ -15,7 +15,7 @@ Sin credenciales, el fallback solo funciona si `NODE_ENV` no es `production` y s
 ## Supabase
 
 1. Crea un proyecto en [Supabase](https://supabase.com/).
-2. En **Project Settings > API**, copia la **Project URL** a `NEXT_PUBLIC_SUPABASE_URL` y la clave **service_role** a `SUPABASE_SERVICE_ROLE_KEY`. La service role key es solo servidor.
+2. En **Project Settings > API**, copia la **Project URL** a `NEXT_PUBLIC_SUPABASE_URL` y configura la clave secreta nueva (`sb_secret_...`) en `SUPABASE_SECRET_KEY`. Esta es la variable preferida y la clave es solo servidor. La aplicación también acepta la clave heredada **service_role** (JWT `eyJ...`) en `SUPABASE_SERVICE_ROLE_KEY` si `SUPABASE_SECRET_KEY` no está definida. Si ambas existen, se usa `SUPABASE_SECRET_KEY`.
 3. Ejecuta `supabase/migrations/20260924214000_initial_schema.sql` en **SQL Editor**, o usa la CLI:
 
    ```bash
@@ -28,9 +28,9 @@ Sin credenciales, el fallback solo funciona si `NODE_ENV` no es `production` y s
 6. Comprueba que puedes iniciar sesión y elimina `ADMIN_SETUP_TOKEN` de Vercel. Haz un nuevo deploy. La ruta rechaza cualquier alta después de existir un usuario y queda deshabilitada sin el token.
 7. Define un `SESSION_SECRET` aleatorio de al menos 32 caracteres. La sesión es una cookie httpOnly firmada y cada request vuelve a validar el usuario y su rol en Supabase.
 
-Si `GET /api/setup` devuelve `503`, el campo `diagnostic` permite identificar el problema sin revelar secretos: `SETUP_CONFIG_MISSING` indica variables ausentes, `SETUP_CONFIG_INVALID` una URL o clave con formato no válido, `SETUP_SUPABASE_CREDENTIALS_INVALID` credenciales rechazadas por Supabase y `SETUP_SUPABASE_SCHEMA_MISSING` una tabla o migración ausente. Los errores inesperados usan `SETUP_SUPABASE_UNKNOWN`; el servidor registra únicamente ese código seguro.
+Si `GET /api/setup` devuelve `503`, el campo `diagnostic` permite identificar el problema sin revelar secretos: `SETUP_CONFIG_MISSING` indica variables ausentes, `SETUP_CONFIG_INVALID` una URL o clave con formato no válido, `SETUP_SUPABASE_CREDENTIALS_INVALID` credenciales rechazadas por Supabase y `SETUP_SUPABASE_SCHEMA_MISSING` una tabla o migración ausente. Las claves aceptadas son `sb_secret_` seguido de caracteres alfanuméricos, `_` o `-`, o la service role JWT heredada con tres segmentos. Los errores inesperados usan `SETUP_SUPABASE_UNKNOWN`; el servidor registra únicamente ese código seguro.
 
-La app usa cuatro tablas (`usuarios`, `generadores`, `movimientos`, `destinatarios`) y RLS activado. Las rutas API acceden mediante `SUPABASE_SERVICE_ROLE_KEY`; no se crean políticas anónimas permisivas.
+La app usa cuatro tablas (`usuarios`, `generadores`, `movimientos`, `destinatarios`) y RLS activado. Las rutas API acceden mediante la variable secreta seleccionada (`SUPABASE_SECRET_KEY` preferida, o `SUPABASE_SERVICE_ROLE_KEY` heredada); no se crean políticas anónimas permisivas.
 
 ## Resend
 
@@ -42,7 +42,7 @@ La app usa cuatro tablas (`usuarios`, `generadores`, `movimientos`, `destinatari
 ## Vercel
 
 1. Importa el repositorio en Vercel.
-2. En **Project Settings > Environment Variables**, configura `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SESSION_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` y `NEXT_PUBLIC_APP_URL` para Production (y Preview si procede). Solo durante el alta inicial añade `ADMIN_SETUP_TOKEN` en Production.
+2. En **Project Settings > Environment Variables**, configura `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY` (valor completo `sb_secret_...`), `SESSION_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` y `NEXT_PUBLIC_APP_URL` para Production (y Preview si procede). No uses `NEXT_PUBLIC_SUPABASE_ANON_KEY` para estas rutas de servidor. Solo durante el alta inicial añade `ADMIN_SETUP_TOKEN` en Production.
 3. Mantén `ALLOW_DEMO_DATA` y `ALLOW_DEMO_EMAIL` sin definir o en `false`.
 4. Despliega, realiza el alta en `/setup`, elimina `ADMIN_SETUP_TOKEN` y vuelve a desplegar. CI ejecuta `npm ci`, lint y build mediante `.github/workflows/ci.yml`.
 

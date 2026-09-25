@@ -2,7 +2,10 @@ import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const credentialVariable = process.env.SUPABASE_SECRET_KEY
+  ? 'SUPABASE_SECRET_KEY'
+  : 'SUPABASE_SERVICE_ROLE_KEY';
 
 export type SupabaseFailureKind = 'credentials' | 'schema' | 'configuration' | 'unknown';
 
@@ -27,33 +30,33 @@ function isValidSupabaseUrl(value: string | undefined) {
   }
 }
 
-function isValidServiceRoleKey(value: string | undefined) {
+function isValidSupabaseServerKey(value: string | undefined) {
   if (!value) return false;
-  if (value.startsWith('sb_secret_')) return value.length > 'sb_secret_'.length;
-  return value.startsWith('eyJ') && value.split('.').length === 3;
+  if (/^sb_secret_[A-Za-z0-9_-]+$/.test(value)) return true;
+  return /^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value);
 }
 
-const hasValidConfiguration = isValidSupabaseUrl(url) && isValidServiceRoleKey(serviceRoleKey);
+const hasValidConfiguration = isValidSupabaseUrl(url) && isValidSupabaseServerKey(secretKey);
 
 export const supabaseAdmin =
-  hasValidConfiguration && url && serviceRoleKey
-    ? createClient(url, serviceRoleKey, {
+  hasValidConfiguration && url && secretKey
+    ? createClient(url, secretKey, {
         auth: { autoRefreshToken: false, persistSession: false },
       })
     : null;
 
 export function getPersistenceConfigurationError() {
-  if (!url || !serviceRoleKey) {
-    return 'Supabase no está configurado. Define NEXT_PUBLIC_SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY.';
+  if (!url || !secretKey) {
+    return 'Supabase no está configurado. Define NEXT_PUBLIC_SUPABASE_URL y SUPABASE_SECRET_KEY (o SUPABASE_SERVICE_ROLE_KEY).';
   }
   if (!hasValidConfiguration) {
-    return 'La configuración de Supabase no es válida.';
+    return 'La configuración de Supabase no es válida. La clave debe ser sb_secret_... o una service role JWT heredada.';
   }
   return null;
 }
 
 export function getSupabaseConfigurationStatus() {
-  if (!url || !serviceRoleKey) return 'missing' as const;
+  if (!url || !secretKey) return 'missing' as const;
   return hasValidConfiguration ? 'valid' as const : 'invalid' as const;
 }
 
@@ -139,5 +142,9 @@ export function getSupabaseFailureMetadata(error: unknown) {
 }
 
 export function getSupabaseStatus() {
-  return { configured: Boolean(supabaseAdmin), url: url ?? null };
+  return {
+    configured: Boolean(supabaseAdmin),
+    url: url ?? null,
+    credentialVariable,
+  };
 }
