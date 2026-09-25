@@ -23,19 +23,10 @@ Sin credenciales, el fallback solo funciona si `NODE_ENV` no es `production` y s
    npx supabase db push
    ```
 
-4. Crea el primer usuario generando un hash scrypt (nunca guardes la contraseña en claro). Por ejemplo, desde la raíz del repositorio:
-
-   ```bash
-   node -e "const c=require('crypto'); const s=c.randomBytes(16).toString('hex'); c.scrypt('CAMBIA_ESTA_PASSWORD',s,64,(e,k)=>console.log('scrypt$'+s+'$'+k.toString('hex')))"
-   ```
-
-   Inserta el resultado en SQL Editor:
-
-   ```sql
-   insert into public.usuarios (email, nombre, rol, password_hash)
-   values ('admin@tu-dominio.com', 'Administrador', 'editor', 'scrypt$<salt>$<hash>');
-   ```
-5. Define un `SESSION_SECRET` aleatorio de al menos 32 caracteres. La sesión es una cookie httpOnly firmada y cada request vuelve a validar el usuario y su rol en Supabase.
+4. Define temporalmente `ADMIN_SETUP_TOKEN` en Vercel Production con un secreto aleatorio largo (por ejemplo, generado en un gestor de secretos). No lo incluyas en el repositorio.
+5. Despliega de nuevo y abre `https://<tu-dominio>/setup`. Introduce el token, nombre, email y una contraseña de al menos 12 caracteres. La contraseña se hashea en el servidor; nunca se guarda ni se envía como hash desde el navegador.
+6. Comprueba que puedes iniciar sesión y elimina `ADMIN_SETUP_TOKEN` de Vercel. Haz un nuevo deploy. La ruta rechaza cualquier alta después de existir un usuario y queda deshabilitada sin el token.
+7. Define un `SESSION_SECRET` aleatorio de al menos 32 caracteres. La sesión es una cookie httpOnly firmada y cada request vuelve a validar el usuario y su rol en Supabase.
 
 La app usa cuatro tablas (`usuarios`, `generadores`, `movimientos`, `destinatarios`) y RLS activado. Las rutas API acceden mediante `SUPABASE_SERVICE_ROLE_KEY`; no se crean políticas anónimas permisivas.
 
@@ -49,9 +40,9 @@ La app usa cuatro tablas (`usuarios`, `generadores`, `movimientos`, `destinatari
 ## Vercel
 
 1. Importa el repositorio en Vercel.
-2. En **Project Settings > Environment Variables**, configura `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SESSION_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` y `NEXT_PUBLIC_APP_URL` para Production (y Preview si procede).
+2. En **Project Settings > Environment Variables**, configura `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SESSION_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` y `NEXT_PUBLIC_APP_URL` para Production (y Preview si procede). Solo durante el alta inicial añade `ADMIN_SETUP_TOKEN` en Production.
 3. Mantén `ALLOW_DEMO_DATA` y `ALLOW_DEMO_EMAIL` sin definir o en `false`.
-4. Despliega. CI ejecuta `npm ci`, lint y build mediante `.github/workflows/ci.yml`.
+4. Despliega, realiza el alta en `/setup`, elimina `ADMIN_SETUP_TOKEN` y vuelve a desplegar. CI ejecuta `npm ci`, lint y build mediante `.github/workflows/ci.yml`.
 
 ## Validación
 
