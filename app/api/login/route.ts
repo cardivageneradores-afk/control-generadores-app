@@ -64,20 +64,20 @@ export async function POST(request: Request) {
     return persistenceFailureResponse(error);
   }
   const user = state.usuarios.find((candidate) => candidate.email.toLowerCase() === email);
+  if (!user) {
+    return NextResponse.json({ error: 'Email o contraseña incorrectos.' }, { status: 401 });
+  }
 
-  let passwordValid = false;
   try {
-    passwordValid = Boolean(user && (await verifyPassword(password, user.passwordHash)));
+    if (!(await verifyPassword(password, user.passwordHash))) {
+      return NextResponse.json({ error: 'Email o contraseña incorrectos.' }, { status: 401 });
+    }
   } catch (error) {
     console.error('[login] Password verification failure', getSupabaseFailureMetadata(error));
     return NextResponse.json(
       { error: 'No se pudo validar la cuenta. Revisa la configuración de usuarios.' },
       { status: 503 },
     );
-  }
-
-  if (!passwordValid) {
-    return NextResponse.json({ error: 'Email o contraseña incorrectos.' }, { status: 401 });
   }
 
   const { passwordHash: _passwordHash, ...safeUser } = user;
