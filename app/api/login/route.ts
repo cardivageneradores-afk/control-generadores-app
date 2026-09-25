@@ -5,9 +5,41 @@ import {
   SESSION_COOKIE_NAME,
   sessionCookieOptions,
 } from '@/app/lib/auth';
-import { getStore } from '@/app/lib/store';
+import { getStore, StoreError } from '@/app/lib/store';
 import { verifyPassword } from '@/app/lib/password';
-import { getPersistenceConfigurationError } from '@/app/lib/supabase';
+import {
+  classifySupabaseFailure,
+  getPersistenceConfigurationError,
+  getSupabaseFailureMetadata,
+} from '@/app/lib/supabase';
+
+function persistenceFailureResponse(error: unknown) {
+  const kind = error instanceof StoreError ? error.kind : classifySupabaseFailure(error);
+  console.error('[login] Supabase persistence failure', getSupabaseFailureMetadata(error));
+
+  if (kind === 'schema') {
+    return NextResponse.json(
+      { error: 'La base de datos no está actualizada. Ejecuta las migraciones de Supabase.' },
+      { status: 503 },
+    );
+  }
+  if (kind === 'credentials') {
+    return NextResponse.json(
+      { error: 'Las credenciales del servidor para Supabase no son válidas.' },
+      { status: 503 },
+    );
+  }
+  if (kind === 'configuration') {
+    return NextResponse.json(
+      { error: 'No se puede conectar con Supabase. Revisa la URL y la clave secreta del servidor.' },
+      { status: 503 },
+    );
+  }
+  return NextResponse.json(
+    { error: 'No se pudo consultar la base de datos. Revisa la configuración y las migraciones de Supabase.' },
+    { status: 503 },
+  );
+}
 
 export async function POST(request: Request) {
   const configurationError = getSessionConfigurationError();
@@ -15,7 +47,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: configurationError }, { status: 503 });
   }
   const persistenceError = getPersistenceConfigurationError();
-  if (persistenceError && process.env.ALLOW_DEMO_DATA !== 'true') {
+  const demoFallbackEnabled =
+    process.env.NODE_ENV !== 'production' && process.env.ALLOW_DEMO_DATA === 'true';
+  if (persistenceError && !demoFallbackEnabled) {
     return NextResponse.json({ error: persistenceError }, { status: 503 });
   }
 
@@ -23,10 +57,26 @@ export async function POST(request: Request) {
   const email = String(body.email ?? '').trim().toLowerCase();
   const password = String(body.password ?? '');
 
-  const state = await getStore();
+  let state: Awaited<ReturnType<typeof getStore>>;
+  try {
+    state = await getStore();
+  } catch (error) {
+    return persistenceFailureResponse(error);
+  }
   const user = state.usuarios.find((candidate) => candidate.email.toLowerCase() === email);
 
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+  let passwordValid = false;
+  try {
+    passwordValid = Boolean(user && (await verifyPassword(password, user.passwordHash)));
+  } catch (error) {
+    console.error('[login] Password verification failure', getSupabaseFailureMetadata(error));
+    return NextResponse.json(
+      { error: 'No se pudo validar la cuenta. Revisa la configuración de usuarios.' },
+      { status: 503 },
+    );
+  }
+
+  if (!passwordValid) {
     return NextResponse.json({ error: 'Email o contraseña incorrectos.' }, { status: 401 });
   }
 

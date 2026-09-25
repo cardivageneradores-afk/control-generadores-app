@@ -1,9 +1,24 @@
 import { DEMO_STATE } from './demo-data';
-import { supabaseAdmin, getPersistenceConfigurationError } from './supabase';
+import {
+  classifySupabaseFailure,
+  getPersistenceConfigurationError,
+  supabaseAdmin,
+  type SupabaseFailureKind,
+} from './supabase';
 import type { AppState, Generator, Movement, User } from './types';
 
 function demoEnabled() {
   return process.env.NODE_ENV !== 'production' && process.env.ALLOW_DEMO_DATA === 'true';
+}
+
+export class StoreError extends Error {
+  readonly kind: SupabaseFailureKind;
+
+  constructor(message: string, cause: unknown, kind = classifySupabaseFailure(cause)) {
+    super(message, { cause });
+    this.name = 'StoreError';
+    this.kind = kind;
+  }
 }
 
 function clone<T>(value: T): T {
@@ -13,7 +28,11 @@ function clone<T>(value: T): T {
 function assertSupabase() {
   if (!supabaseAdmin) {
     if (demoEnabled()) return false;
-    throw new Error(getPersistenceConfigurationError() ?? 'Supabase no está configurado.');
+    throw new StoreError(
+      getPersistenceConfigurationError() ?? 'Supabase no está configurado.',
+      undefined,
+      'configuration',
+    );
   }
   return true;
 }
@@ -28,7 +47,9 @@ export async function getStore(): Promise<AppState> {
     supabaseAdmin!.from('destinatarios').select('email').order('email'),
   ]);
   for (const result of [users, generators, movements, recipients]) {
-    if (result.error) throw new Error(`Error leyendo Supabase: ${result.error.message}`);
+    if (result.error) {
+      throw new StoreError('Error leyendo Supabase.', result.error);
+    }
   }
 
   return {
@@ -57,7 +78,9 @@ export async function setStore(next: AppState): Promise<AppState> {
     client.from('destinatarios').delete().neq('email', ''),
   ]);
   for (const result of clear) {
-    if (result.error) throw new Error(`Error limpiando Supabase: ${result.error.message}`);
+    if (result.error) {
+      throw new StoreError('Error limpiando Supabase.', result.error);
+    }
   }
   const operations = await Promise.all([
     client.from('usuarios').insert(next.usuarios.map((user) => ({
@@ -73,7 +96,9 @@ export async function setStore(next: AppState): Promise<AppState> {
     client.from('destinatarios').insert(next.destinatarios.map((email) => ({ email }))),
   ]);
   for (const result of operations) {
-    if (result.error) throw new Error(`Error guardando en Supabase: ${result.error.message}`);
+    if (result.error) {
+      throw new StoreError('Error guardando en Supabase.', result.error);
+    }
   }
   return clone(next);
 }
