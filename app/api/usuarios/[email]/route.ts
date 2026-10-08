@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
+import { withStoreErrorHandling } from '@/app/lib/api-errors';
 import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore, setStore } from '@/app/lib/store';
 
-export async function DELETE(request: Request, { params }: { params: Promise<{ email: string }> }) {
+export const DELETE = withStoreErrorHandling(async (request: Request, { params }: { params: Promise<{ email: string }> }) => {
   if (!(await getEditorFromRequest(request))) {
     return NextResponse.json({ error: 'Necesitas una sesión de editor.' }, { status: 403 });
   }
@@ -20,4 +21,4 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ e
     ok: true,
     usuarios: nextUsers.map(({ passwordHash: _passwordHash, ...user }) => user),
   });
-}
+}, 'usuarios');

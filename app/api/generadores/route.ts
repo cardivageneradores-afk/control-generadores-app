@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
+import { withStoreErrorHandling } from '@/app/lib/api-errors';
 import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore, setStore } from '@/app/lib/store';
 
-export async function POST(request: Request) {
+export const POST = withStoreErrorHandling(async (request: Request) => {
   if (!(await getEditorFromRequest(request))) {
     return NextResponse.json({ error: 'Necesitas una sesión de editor.' }, { status: 403 });
   }
@@ -39,4 +40,4 @@ export async function POST(request: Request) {
 
   await setStore(nextState);
   return NextResponse.json({ ok: true, generador: nextState.generadores[nextState.generadores.length - 1] });
-}
+}, 'generadores');

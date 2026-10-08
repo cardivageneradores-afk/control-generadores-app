@@ -1,11 +1,12 @@
 import 'server-only';
 import { createClient } from '@supabase/supabase-js';
+import {
+  isValidSupabaseServerKey,
+  isValidSupabaseUrl,
+  resolveSupabaseConfiguration,
+} from './supabase-config';
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-const credentialVariable = process.env.SUPABASE_SECRET_KEY
-  ? 'SUPABASE_SECRET_KEY'
-  : 'SUPABASE_SERVICE_ROLE_KEY';
+const { url, secretKey, credentialVariable } = resolveSupabaseConfiguration(process.env);
 
 export type SupabaseFailureKind = 'credentials' | 'schema' | 'configuration' | 'unknown';
 
@@ -13,28 +14,6 @@ type SupabaseFailureMetadata = {
   codes: string[];
   statuses: number[];
 };
-
-function isValidSupabaseUrl(value: string | undefined) {
-  if (!value) return false;
-  try {
-    const parsed = new URL(value);
-    return (
-      (parsed.protocol === 'https:' || (parsed.protocol === 'http:' && parsed.hostname === 'localhost')) &&
-      !parsed.username &&
-      !parsed.password &&
-      !parsed.search &&
-      !parsed.hash
-    );
-  } catch {
-    return false;
-  }
-}
-
-function isValidSupabaseServerKey(value: string | undefined) {
-  if (!value) return false;
-  if (/^sb_secret_[A-Za-z0-9_-]+$/.test(value)) return true;
-  return /^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value);
-}
 
 const hasValidConfiguration = isValidSupabaseUrl(url) && isValidSupabaseServerKey(secretKey);
 
@@ -47,10 +26,10 @@ export const supabaseAdmin =
 
 export function getPersistenceConfigurationError() {
   if (!url || !secretKey) {
-    return 'Supabase no está configurado. Define NEXT_PUBLIC_SUPABASE_URL y SUPABASE_SECRET_KEY (o SUPABASE_SERVICE_ROLE_KEY).';
+    return 'Supabase no está configurado. Define SUPABASE_URL (o NEXT_PUBLIC_SUPABASE_URL) y SUPABASE_SECRET_KEY (o SUPABASE_SERVICE_ROLE_KEY).';
   }
   if (!hasValidConfiguration) {
-    return 'La configuración de Supabase no es válida. La clave debe ser sb_secret_... o una service role JWT heredada.';
+    return 'La configuración de Supabase no es válida. La URL debe usar HTTPS (o localhost) y la clave debe ser sb_secret_... o una service role JWT heredada.';
   }
   return null;
 }
@@ -124,7 +103,14 @@ export function classifySupabaseFailure(error: unknown): SupabaseFailureKind {
     statuses.includes(0) ||
     codes.includes('ENOTFOUND') ||
     codes.includes('EAI_AGAIN') ||
-    codes.includes('ECONNREFUSED')
+    codes.includes('ECONNREFUSED') ||
+    codes.includes('ECONNRESET') ||
+    codes.includes('ETIMEDOUT') ||
+    codes.includes('EHOSTUNREACH') ||
+    codes.includes('ENETUNREACH') ||
+    codes.includes('UND_ERR_CONNECT_TIMEOUT') ||
+    codes.includes('UND_ERR_HEADERS_TIMEOUT') ||
+    codes.includes('UND_ERR_SOCKET')
   ) {
     return 'configuration';
   }
@@ -136,7 +122,7 @@ export function getSupabaseFailureMetadata(error: unknown) {
   const code = metadata.codes[0];
   const status = metadata.statuses[0];
   return {
-    ...(code && /^[A-Z0-9_.-]{1,32}$/.test(code) ? { code } : {}),
+    ...(code && /^[A-Z0-9_.-]{1,40}$/.test(code) ? { code } : {}),
     ...(status !== undefined ? { status } : {}),
   };
 }

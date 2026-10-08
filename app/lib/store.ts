@@ -71,34 +71,21 @@ export async function getStore(): Promise<AppState> {
 export async function setStore(next: AppState): Promise<AppState> {
   if (!assertSupabase()) return clone(next);
   const client = supabaseAdmin!;
-  const clear = await Promise.all([
-    client.from('movimientos').delete().neq('id', ''),
-    client.from('generadores').delete().neq('id', ''),
-    client.from('usuarios').delete().neq('id', ''),
-    client.from('destinatarios').delete().neq('email', ''),
-  ]);
-  for (const result of clear) {
-    if (result.error) {
-      throw new StoreError('Error limpiando Supabase.', result.error);
-    }
-  }
-  const operations = await Promise.all([
-    client.from('usuarios').insert(next.usuarios.map((user) => ({
+  const { error } = await client.rpc('replace_app_state', {
+    p_usuarios: next.usuarios.map((user) => ({
       id: user.id, email: user.email, nombre: user.nombre, rol: user.rol, password_hash: user.passwordHash,
-    }))),
-    client.from('generadores').insert(next.generadores),
-    client.from('movimientos').insert(next.movimientos.map((movement) => ({
+    })),
+    p_generadores: next.generadores,
+    p_movimientos: next.movimientos.map((movement) => ({
       id: movement.id, generador_id: movement.generador_id, fecha: movement.fecha, origen: movement.origen,
       destino: movement.destino, tipo_transporte: movement.tipo_transporte, notas: movement.notas ?? null,
       estado: movement.estado, usuario: movement.usuario ?? null, creado_en: movement.creado_en ?? null,
       completado_en: movement.completado_en ?? null,
-    }))),
-    client.from('destinatarios').insert(next.destinatarios.map((email) => ({ email }))),
-  ]);
-  for (const result of operations) {
-    if (result.error) {
-      throw new StoreError('Error guardando en Supabase.', result.error);
-    }
+    })),
+    p_destinatarios: next.destinatarios,
+  });
+  if (error) {
+    throw new StoreError('Error guardando Supabase.', error);
   }
   return clone(next);
 }

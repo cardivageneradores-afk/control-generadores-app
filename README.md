@@ -15,8 +15,8 @@ Sin credenciales, el fallback solo funciona si `NODE_ENV` no es `production` y s
 ## Supabase
 
 1. Crea un proyecto en [Supabase](https://supabase.com/).
-2. En **Project Settings > API**, copia la **Project URL** a `NEXT_PUBLIC_SUPABASE_URL` y configura la clave secreta nueva (`sb_secret_...`) en `SUPABASE_SECRET_KEY`. Esta es la variable preferida y la clave es solo servidor. La aplicación también acepta la clave heredada **service_role** (JWT `eyJ...`) en `SUPABASE_SERVICE_ROLE_KEY` si `SUPABASE_SECRET_KEY` no está definida. Si ambas existen, se usa `SUPABASE_SECRET_KEY`.
-3. Ejecuta `supabase/migrations/20260924214000_initial_schema.sql` en **SQL Editor**, o usa la CLI:
+2. En **Project Settings > API Keys** o en el diálogo **Connect**, configura la URL en `SUPABASE_URL` y la clave secreta nueva (`sb_secret_...`) en `SUPABASE_SECRET_KEY`. Son variables de servidor; la app también acepta `NEXT_PUBLIC_SUPABASE_URL` como alias heredado y `SUPABASE_SERVICE_ROLE_KEY` con una clave `service_role` JWT heredada. Se prefieren los nombres nuevos si ambos están definidos, así que no hace falta duplicar variables.
+3. Ejecuta estas migraciones en orden en **SQL Editor**: `20260924214000_initial_schema.sql`, `20260925100000_admin_bootstrap.sql` y `20261008110000_transactional_store.sql`. La segunda crea la función RPC usada por `/setup`; la tercera hace transaccionales las escrituras de la aplicación. Si usas la CLI:
 
    ```bash
    npx supabase link --project-ref <project-ref>
@@ -42,15 +42,16 @@ La app usa cuatro tablas (`usuarios`, `generadores`, `movimientos`, `destinatari
 ## Vercel
 
 1. Importa el repositorio en Vercel.
-2. En **Project Settings > Environment Variables**, configura `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY` (valor completo `sb_secret_...`), `SESSION_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` y `NEXT_PUBLIC_APP_URL` para Production (y Preview si procede). No uses `NEXT_PUBLIC_SUPABASE_ANON_KEY` para estas rutas de servidor. Solo durante el alta inicial añade `ADMIN_SETUP_TOKEN` en Production.
+2. Si la integración Supabase-Vercel ya creó `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`, el código los acepta sin duplicarlos. Para una configuración nueva, usa `SUPABASE_URL` y `SUPABASE_SECRET_KEY` (`sb_secret_...`) en Production (y Preview si procede). No dupliques la URL como `NEXT_PUBLIC_SUPABASE_URL` ni uses `NEXT_PUBLIC_SUPABASE_ANON_KEY` para estas rutas de servidor. Configura también `SESSION_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` y `NEXT_PUBLIC_APP_URL`. Solo durante el alta inicial añade `ADMIN_SETUP_TOKEN` en Production.
 3. Mantén `ALLOW_DEMO_DATA` y `ALLOW_DEMO_EMAIL` sin definir o en `false`.
-4. Despliega, realiza el alta en `/setup`, elimina `ADMIN_SETUP_TOKEN` y vuelve a desplegar. CI ejecuta `npm ci`, lint y build mediante `.github/workflows/ci.yml`.
+4. Despliega, realiza el alta en `/setup`, elimina `ADMIN_SETUP_TOKEN` y vuelve a desplegar. CI ejecuta `npm ci`, tests, lint y build mediante `.github/workflows/ci.yml`.
 
 ## Validación
 
 ```bash
 npm run lint
+npm test
 npm run build
 ```
 
-La app devuelve `503` si falta la configuración de sesión o persistencia en un entorno no-demo, en vez de ocultar el problema con datos en memoria.
+La app devuelve `503` si falta la configuración de sesión o persistencia en un entorno no-demo, en vez de ocultar el problema con datos en memoria. Las escrituras se aplican dentro de una transacción de PostgreSQL para que un error no borre antes los datos existentes.

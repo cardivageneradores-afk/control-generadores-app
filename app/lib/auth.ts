@@ -39,12 +39,14 @@ export async function getPublicUserFromRequest(request: Request): Promise<Omit<U
   if (!token) return null;
   const [encodedPayload, signature] = token.split('.');
   if (!encodedPayload || !signature || !verifySignature(encodedPayload, signature)) return null;
+  let subject: string;
   try {
     const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8')) as SessionPayload;
     if (!payload.sub || !Number.isInteger(payload.exp) || payload.exp < Math.floor(Date.now() / 1000)) return null;
-    const user = (await getStore()).usuarios.find((candidate) => candidate.id === payload.sub);
-    return user ? publicUser(user) : null;
+    subject = payload.sub;
   } catch { return null; }
+  const user = (await getStore()).usuarios.find((candidate) => candidate.id === subject);
+  return user ? publicUser(user) : null;
 }
 export async function getEditorFromRequest(request: Request) {
   const user = await getPublicUserFromRequest(request);

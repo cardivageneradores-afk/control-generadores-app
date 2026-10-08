@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
+import { withStoreErrorHandling } from '@/app/lib/api-errors';
 import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore, setStore } from '@/app/lib/store';
 import { hashPassword } from '@/app/lib/password';
 
-export async function POST(request: Request) {
+export const POST = withStoreErrorHandling(async (request: Request) => {
   if (!(await getEditorFromRequest(request))) {
     return NextResponse.json({ error: 'Necesitas una sesión de editor.' }, { status: 403 });
   }
@@ -37,7 +39,7 @@ export async function POST(request: Request) {
     : [
         ...state.usuarios,
         {
-          id: `u-${Date.now()}`,
+          id: randomUUID(),
           email,
           nombre,
           rol: normalizedRole,
@@ -53,4 +55,4 @@ export async function POST(request: Request) {
     ok: true,
     usuarios: nextUsers.map(({ passwordHash: _passwordHash, ...user }) => user),
   });
-}
+}, 'usuarios');

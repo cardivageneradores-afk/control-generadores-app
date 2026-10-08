@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
+import { withStoreErrorHandling } from '@/app/lib/api-errors';
 import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore, setStore } from '@/app/lib/store';
 
-export async function POST(request: Request) {
+export const POST = withStoreErrorHandling(async (request: Request) => {
   const editor = await getEditorFromRequest(request);
   if (!editor) {
     return NextResponse.json({ error: 'Necesitas una sesión de editor.' }, { status: 403 });
@@ -47,4 +48,4 @@ export async function POST(request: Request) {
 
   await setStore(next);
   return NextResponse.json({ ok: true, movimiento: next.movimientos[next.movimientos.length - 1] });
-}
+}, 'movimientos');

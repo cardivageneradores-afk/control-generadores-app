@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withStoreErrorHandling } from '@/app/lib/api-errors';
 import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore } from '@/app/lib/store';
 import { sendSummaryEmail } from '@/app/lib/email';
@@ -10,7 +11,7 @@ function formatDate(date: string) {
   });
 }
 
-export async function POST(request: Request) {
+export const POST = withStoreErrorHandling(async (request: Request) => {
   if (!(await getEditorFromRequest(request))) {
     return NextResponse.json({ error: 'Necesitas una sesión de editor.' }, { status: 403 });
   }
@@ -65,4 +66,4 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json(response);
-}
+}, 'enviar-resumen');
