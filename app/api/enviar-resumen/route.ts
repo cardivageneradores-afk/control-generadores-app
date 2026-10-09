@@ -4,7 +4,7 @@ import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore } from '@/app/lib/store';
 import { EmailConfigurationError, EmailDeliveryError } from '@/app/lib/email-delivery';
 import { sendSummaryEmail } from '@/app/lib/email';
-import { buildMovementSummary } from '@/app/lib/movement-summary';
+import { buildWeeklyMovementEmail } from '@/app/lib/weekly-movement-email';
 
 export const POST = withStoreErrorHandling(async (request: Request) => {
   if (!(await getEditorFromRequest(request))) {
@@ -17,7 +17,7 @@ export const POST = withStoreErrorHandling(async (request: Request) => {
   }
   const recipients = state.destinatarios;
 
-  const summary = buildMovementSummary(state.movimientos, state.generadores);
+  const summary = buildWeeklyMovementEmail(state.movimientos, state.generadores);
 
   try {
     const response = await sendSummaryEmail({

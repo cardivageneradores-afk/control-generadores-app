@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test app/lib/supabase-config.test.mjs app/lib/generator-deletion.test.mjs app/lib/movement-time.test.mjs app/lib/movement-summary.test.mjs app/lib/email-delivery.test.mjs"
+    "test": "node --experimental-strip-types --test app/lib/supabase-config.test.mjs app/lib/generator-deletion.test.mjs app/lib/movement-time.test.mjs app/lib/movement-summary.test.mjs app/lib/weekly-movement-email.test.mjs app/lib/email-delivery.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
