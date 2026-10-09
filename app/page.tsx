@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Copy, LogOut, Mail, Pencil, Plus, Trash2, Users } from 'lucide-react';
+import { buildMovementSummary } from './lib/movement-summary';
 
 type Role = 'editor' | 'lector';
 type GeneratorStatus = 'estable' | 'en-oficina' | 'en-transito';
@@ -31,6 +32,8 @@ interface Movement {
   destino: string;
   tipo_transporte: TransportType;
   notas?: string;
+  hora_recogida?: string;
+  hora_entrega?: string;
   estado: MovementStatus;
   usuario?: string;
 }
@@ -122,6 +125,8 @@ export default function Page() {
     destino: '',
     tipoTransporte: 'Propio' as TransportType,
     notas: '',
+    horaRecogida: '',
+    horaEntrega: '',
   });
   const [generatorForm, setGeneratorForm] = useState({
     codigo: '',
@@ -132,6 +137,8 @@ export default function Page() {
   const [userForm, setUserForm] = useState({ nombre: '', email: '', password: '', rol: 'editor' as Role });
   const [recipientEmail, setRecipientEmail] = useState('');
   const [toast, setToast] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [stateError, setStateError] = useState<string | null>(null);
   const [login, setLogin] = useState({ email: 'admin@empresa.com', password: 'admin123' });
   const [loginError, setLoginError] = useState('');
 
@@ -149,7 +156,11 @@ export default function Page() {
     try {
       const data = await api<AppState>('/api/state');
       setState({ ...initialState, ...data, me: data.me ?? null });
-    } catch {
+      setStateError(null);
+    } catch (error) {
+      if (error instanceof Error && error.message !== 'Sesión no válida.') {
+        setStateError(error.message);
+      }
       setState((current) => ({ ...current, me: null }));
     }
   };
@@ -182,6 +193,8 @@ export default function Page() {
       destino: '',
       tipoTransporte: 'Propio',
       notas: '',
+      horaRecogida: '',
+      horaEntrega: '',
     });
     setShowMoveModal(true);
   };
@@ -199,6 +212,8 @@ export default function Page() {
       destino: movement.destino,
       tipoTransporte: movement.tipo_transporte,
       notas: movement.notas ?? '',
+      horaRecogida: movement.hora_recogida?.slice(0, 5) ?? '',
+      horaEntrega: movement.hora_entrega?.slice(0, 5) ?? '',
     });
     setShowMoveModal(true);
   };
@@ -220,6 +235,8 @@ export default function Page() {
             destino: moveForm.destino,
             tipoTransporte: moveForm.tipoTransporte,
             notas: moveForm.notas,
+            horaRecogida: moveForm.horaRecogida,
+            horaEntrega: moveForm.horaEntrega,
           }),
         });
         setToast('Movimiento actualizado.');
@@ -233,6 +250,8 @@ export default function Page() {
             destino: moveForm.destino,
             tipoTransporte: moveForm.tipoTransporte,
             notas: moveForm.notas,
+            horaRecogida: moveForm.horaRecogida,
+            horaEntrega: moveForm.horaEntrega,
           }),
         });
         setToast('Movimiento registrado.');
@@ -396,17 +415,10 @@ export default function Page() {
   };
 
   const copySummary = async () => {
-    const lines = state.movimientos
-      .slice()
-      .sort((a, b) => a.fecha.localeCompare(b.fecha))
-      .map((movement) => {
-        const generator = state.generadores.find((gen) => gen.id === movement.generador_id);
-        return `${formatDate(movement.fecha)} · ${generator?.codigo ?? '—'} · ${movement.origen} → ${movement.destino} · ${movement.estado}`;
-      })
-      .join('\n');
+    const { text } = buildMovementSummary(state.movimientos, state.generadores);
 
     try {
-      await navigator.clipboard.writeText(lines);
+      await navigator.clipboard.writeText(text);
       setToast('Resumen copiado al portapapeles.');
     } catch {
       setToast('No se pudo copiar el resumen.');
@@ -414,11 +426,16 @@ export default function Page() {
   };
 
   const sendSummary = async () => {
+    setEmailError(null);
     try {
-      await api('/api/enviar-resumen', { method: 'POST' });
-      setToast('Resumen enviado por email.');
+      const result = await api<{ mode?: string }>('/api/enviar-resumen', { method: 'POST' });
+      setToast(result.mode === 'demo'
+        ? 'Envío simulado en desarrollo; no se envió ningún email.'
+        : 'Resumen enviado por email.');
     } catch (error) {
-      setToast(error instanceof Error ? error.message : 'No se pudo enviar el resumen.');
+      const message = error instanceof Error ? error.message : 'No se pudo enviar el resumen.';
+      setEmailError(message);
+      setToast(message);
     }
   };
 
@@ -449,6 +466,7 @@ export default function Page() {
             </div>
             <button className="button primary full" onClick={doLogin}>Entrar</button>
             {loginError ? <div className="login-error show">{loginError}</div> : null}
+            {stateError ? <div className="login-error show" role="alert">{stateError}</div> : null}
           </div>
         </div>
       ) : null}
@@ -582,6 +600,7 @@ export default function Page() {
                 ) : null}
               </div>
             </div>
+            {emailError ? <p className="email-error" role="alert">{emailError}</p> : null}
             <div className="legend">
               <span><i className="legend-dot own"></i>Propio</span>
               <span><i className="legend-dot local"></i>Local</span>
@@ -695,8 +714,16 @@ export default function Page() {
               <input value={moveForm.origen} onChange={(e) => setMoveForm({ ...moveForm, origen: e.target.value })} list="locations-list" />
             </div>
             <div className="field">
+              <label>Hora de recogida</label>
+              <input type="time" value={moveForm.horaRecogida} onChange={(e) => setMoveForm({ ...moveForm, horaRecogida: e.target.value })} />
+            </div>
+            <div className="field">
               <label>Entregar en</label>
               <input value={moveForm.destino} onChange={(e) => setMoveForm({ ...moveForm, destino: e.target.value })} list="locations-list" />
+            </div>
+            <div className="field">
+              <label>Hora de entrega</label>
+              <input type="time" value={moveForm.horaEntrega} onChange={(e) => setMoveForm({ ...moveForm, horaEntrega: e.target.value })} />
             </div>
             <div className="field">
               <label>Tipo de transporte</label>

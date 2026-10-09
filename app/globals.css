@@ -490,6 +490,14 @@ h1, h2, h3, h4 {
   display: block;
 }
 
+.email-error {
+  margin: 12px 0 0;
+  color: var(--red);
+  background: var(--red-dark);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;

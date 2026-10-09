@@ -43,7 +43,7 @@ export async function getStore(): Promise<AppState> {
   const [users, generators, movements, recipients] = await Promise.all([
     supabaseAdmin!.from('usuarios').select('id,email,nombre,rol,password_hash'),
     supabaseAdmin!.from('generadores').select('id,codigo,modelo,ubicacion,estado'),
-    supabaseAdmin!.from('movimientos').select('id,generador_id,fecha,origen,destino,tipo_transporte,notas,estado,usuario,creado_en,completado_en').order('fecha'),
+    supabaseAdmin!.from('movimientos').select('id,generador_id,fecha,origen,destino,tipo_transporte,notas,hora_recogida,hora_entrega,estado,usuario,creado_en,completado_en').order('fecha'),
     supabaseAdmin!.from('destinatarios').select('email').order('email'),
   ]);
   for (const result of [users, generators, movements, recipients]) {
@@ -79,6 +79,7 @@ export async function setStore(next: AppState): Promise<AppState> {
     p_movimientos: next.movimientos.map((movement) => ({
       id: movement.id, generador_id: movement.generador_id, fecha: movement.fecha, origen: movement.origen,
       destino: movement.destino, tipo_transporte: movement.tipo_transporte, notas: movement.notas ?? null,
+      hora_recogida: movement.hora_recogida ?? null, hora_entrega: movement.hora_entrega ?? null,
       estado: movement.estado, usuario: movement.usuario ?? null, creado_en: movement.creado_en ?? null,
       completado_en: movement.completado_en ?? null,
     })),

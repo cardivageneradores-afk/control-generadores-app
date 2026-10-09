@@ -27,6 +27,8 @@ export interface Movement {
   destino: string;
   tipo_transporte: TransportType;
   notas?: string;
+  hora_recogida?: string;
+  hora_entrega?: string;
   estado: MovementStatus;
   usuario?: string;
   creado_en?: string;

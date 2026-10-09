@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { withStoreErrorHandling } from '@/app/lib/api-errors';
 import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore, setStore } from '@/app/lib/store';
+import { parseOptionalTime } from '@/app/lib/movement-time';
 
 export const POST = withStoreErrorHandling(async (request: Request) => {
   const editor = await getEditorFromRequest(request);
@@ -16,9 +17,14 @@ export const POST = withStoreErrorHandling(async (request: Request) => {
   const destino = String(body.destino ?? '').trim();
   const tipoTransporte = String(body.tipoTransporte ?? 'Propio');
   const notas = String(body.notas ?? '').trim();
+  const horaRecogida = parseOptionalTime(body.horaRecogida);
+  const horaEntrega = parseOptionalTime(body.horaEntrega);
 
   if (!generadorId || !fecha || !origen || !destino) {
     return NextResponse.json({ error: 'Completa generador, fecha, origen y destino.' }, { status: 400 });
+  }
+  if (!horaRecogida.valid || !horaEntrega.valid) {
+    return NextResponse.json({ error: 'Las horas de recogida y entrega deben tener formato HH:mm.' }, { status: 400 });
   }
 
   const state = await getStore();
@@ -39,6 +45,8 @@ export const POST = withStoreErrorHandling(async (request: Request) => {
         destino,
         tipo_transporte: normalizedType,
         notas: notas || undefined,
+        hora_recogida: horaRecogida.value,
+        hora_entrega: horaEntrega.value,
         estado: 'pendiente' as const,
         usuario: editor.nombre,
         creado_en: new Date().toISOString(),

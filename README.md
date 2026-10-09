@@ -18,7 +18,7 @@ Sin credenciales, el fallback solo funciona si `NODE_ENV` no es `production` y s
 
 1. Crea un proyecto en [Supabase](https://supabase.com/).
 2. En **Project Settings > API Keys** o en el diálogo **Connect**, configura la URL en `SUPABASE_URL` y la clave secreta nueva (`sb_secret_...`) en `SUPABASE_SECRET_KEY`. Son variables de servidor; la app también acepta `NEXT_PUBLIC_SUPABASE_URL` como alias heredado y `SUPABASE_SERVICE_ROLE_KEY` con una clave `service_role` JWT heredada. Se prefieren los nombres nuevos si ambos están definidos, así que no hace falta duplicar variables.
-3. Ejecuta estas migraciones en orden en **SQL Editor**: `20260924214000_initial_schema.sql`, `20260925100000_admin_bootstrap.sql` y `20261008110000_transactional_store.sql`. La segunda crea la función RPC usada por `/setup`; la tercera hace transaccionales las escrituras de la aplicación. Si usas la CLI:
+3. Ejecuta estas migraciones en orden en **SQL Editor**: `20260924214000_initial_schema.sql`, `20260925100000_admin_bootstrap.sql`, `20261008110000_transactional_store.sql` y `20261009105800_movement_times.sql`. La segunda crea la función RPC usada por `/setup`; la tercera hace transaccionales las escrituras de la aplicación; la última añade horas opcionales de recogida/entrega y actualiza el RPC conservando los datos existentes. Aplica `20261009105800_movement_times.sql` **antes de desplegar** la versión de la app que contiene las nuevas columnas. Si el código se despliega primero, las lecturas fallarán explícitamente con un error de migración y las escrituras estarán bloqueadas hasta actualizar el esquema. Si usas la CLI:
 
    ```bash
    npx supabase link --project-ref <project-ref>
@@ -38,7 +38,7 @@ La app usa cuatro tablas (`usuarios`, `generadores`, `movimientos`, `destinatari
 
 1. Crea una API key en [Resend](https://resend.com/).
 2. Verifica el dominio remitente en **Domains**.
-3. Define `RESEND_API_KEY` y `RESEND_FROM_EMAIL`, por ejemplo `Control Generadores <no-reply@tu-dominio.com>`.
+3. Define `RESEND_API_KEY` y `RESEND_FROM_EMAIL`, por ejemplo `Control Generadores <no-reply@tu-dominio.com>`. El remitente debe pertenecer a un dominio verificado; una clave inválida, un dominio no verificado o destinatarios no permitidos por el modo de prueba de Resend se muestran como errores concretos al enviar.
 4. Añade destinatarios desde la interfaz. En producción no se usa ningún destinatario implícito y el envío falla explícitamente si falta configuración.
 
 ## Vercel
