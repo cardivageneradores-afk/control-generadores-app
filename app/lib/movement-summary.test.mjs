@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildMovementSummary } from './movement-summary.ts';
+import { buildMovementSummary, getMovementDetailFields } from './movement-summary.ts';
 
 const movement = {
   id: 'm-1',
@@ -35,6 +35,21 @@ test('includes every movement detail, comments, and both times in copied and ema
   }
 });
 
+test('shares readable detail fields and uses placeholders for missing values', () => {
+  assert.deepEqual(getMovementDetailFields(movement), [
+    { label: 'Hora de recogida', value: '08:30' },
+    { label: 'Hora de entrega', value: '10:15' },
+    { label: 'Transporte', value: 'Local' },
+    { label: 'Notas / comentarios', value: 'Llamar antes de llegar' },
+  ]);
+  assert.deepEqual(getMovementDetailFields({ ...movement, hora_recogida: undefined, hora_entrega: undefined, notas: '  ' }), [
+    { label: 'Hora de recogida', value: 'Sin indicar' },
+    { label: 'Hora de entrega', value: 'Sin indicar' },
+    { label: 'Transporte', value: 'Local' },
+    { label: 'Notas / comentarios', value: 'Sin comentarios' },
+  ]);
+});
+
 test('escapes user-controlled values in HTML and keeps plain text readable', () => {
   const summary = buildMovementSummary([{ ...movement, notas: '<script>alert("x")</script>' }], []);
 
@@ -48,4 +63,16 @@ test('returns a useful empty summary when there are no movements', () => {
 
   assert.match(summary.text, /No hay movimientos registrados/);
   assert.match(summary.html, /No hay movimientos registrados/);
+});
+
+test('supports a custom heading and empty message', () => {
+  const summary = buildMovementSummary([], [], {
+    heading: 'Detalle de movimientos',
+    emptyMessage: 'No hay movimientos esta semana.',
+  });
+
+  assert.match(summary.text, /Detalle de movimientos/);
+  assert.match(summary.text, /No hay movimientos esta semana/);
+  assert.match(summary.html, /<h2>Detalle de movimientos<\/h2>/);
+  assert.match(summary.html, /No hay movimientos esta semana/);
 });

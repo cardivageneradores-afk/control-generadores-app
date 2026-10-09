@@ -1,6 +1,10 @@
 import type { Generator, Movement } from './types';
 
 type SummaryField = { label: string; value: string };
+type MovementSummaryOptions = {
+  heading?: string;
+  emptyMessage?: string;
+};
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat('es-ES', {
@@ -28,7 +32,17 @@ function escapeHtml(value: string) {
     .replaceAll("'", '&#39;');
 }
 
+export function getMovementDetailFields(movement: Movement): SummaryField[] {
+  return [
+    { label: 'Hora de recogida', value: formatTime(movement.hora_recogida) },
+    { label: 'Hora de entrega', value: formatTime(movement.hora_entrega) },
+    { label: 'Transporte', value: movement.tipo_transporte },
+    { label: 'Notas / comentarios', value: movement.notas?.trim() || 'Sin comentarios' },
+  ];
+}
+
 function getSummaryFields(movement: Movement, generator?: Generator): SummaryField[] {
+  const details = getMovementDetailFields(movement);
   return [
     { label: 'Fecha', value: formatDate(movement.fecha) },
     {
@@ -36,11 +50,9 @@ function getSummaryFields(movement: Movement, generator?: Generator): SummaryFie
       value: [generator?.codigo ?? movement.generador_id, generator?.modelo].filter(Boolean).join(' · '),
     },
     { label: 'Origen', value: movement.origen },
-    { label: 'Hora de recogida', value: formatTime(movement.hora_recogida) },
+    details[0],
     { label: 'Destino', value: movement.destino },
-    { label: 'Hora de entrega', value: formatTime(movement.hora_entrega) },
-    { label: 'Transporte', value: movement.tipo_transporte },
-    { label: 'Notas / comentarios', value: movement.notas?.trim() || 'Sin comentarios' },
+    ...details.slice(1),
     { label: 'Estado', value: movement.estado },
     { label: 'Registrado por', value: movement.usuario || '—' },
     { label: 'Creado', value: formatTimestamp(movement.creado_en) },
@@ -48,12 +60,16 @@ function getSummaryFields(movement: Movement, generator?: Generator): SummaryFie
   ];
 }
 
-export function buildMovementSummary(movements: Movement[], generators: Generator[]) {
-  const orderedMovements = [...movements].sort((a, b) => a.fecha.localeCompare(b.fecha));
+export function buildMovementSummary(
+  movements: Movement[],
+  generators: Generator[],
+  { heading = 'Resumen de movimientos', emptyMessage = 'No hay movimientos registrados.' }: MovementSummaryOptions = {},
+) {
+  const orderedMovements = [...movements].sort((a, b) => b.fecha.localeCompare(a.fecha));
   if (!orderedMovements.length) {
     return {
-      text: 'Resumen de movimientos:\n\nNo hay movimientos registrados.',
-      html: '<div style="font-family: Arial, sans-serif; color: #111827;"><h2>Resumen de movimientos</h2><p>No hay movimientos registrados.</p></div>',
+      text: `${heading}:\n\n${emptyMessage}`,
+      html: `<div style="font-family: Arial, sans-serif; color: #111827;"><h2>${escapeHtml(heading)}</h2><p>${escapeHtml(emptyMessage)}</p></div>`,
     };
   }
 
@@ -80,7 +96,7 @@ export function buildMovementSummary(movements: Movement[], generators: Generato
   });
 
   return {
-    text: `Resumen de movimientos:\n\n${summaries.map(({ text }) => text).join('\n\n')}`,
-    html: `<div style="font-family: Arial, sans-serif; color: #111827;"><h2>Resumen de movimientos</h2>${summaries.map(({ html }) => html).join('')}</div>`,
+    text: `${heading}:\n\n${summaries.map(({ text }) => text).join('\n\n')}`,
+    html: `<div style="font-family: Arial, sans-serif; color: #111827;"><h2>${escapeHtml(heading)}</h2>${summaries.map(({ html }) => html).join('')}</div>`,
   };
 }

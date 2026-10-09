@@ -78,6 +78,24 @@ test('renders a generator-by-date grid with movement details in the matching cel
   assert.ok(email.html.includes('Movimientos:</strong> 1'));
   assert.ok(email.html.includes('Pendientes:</strong> 1'));
   assert.ok(email.html.includes('Completados:</strong> 0'));
+  const detailsHeading = email.html.indexOf('<h2>Detalle de movimientos</h2>');
+  assert.ok(detailsHeading > email.html.indexOf('Completados:</strong> 0'));
+  const emailDetails = email.html.slice(detailsHeading);
+  for (const detail of [
+    'Fecha', 'Generador', 'Origen', 'Hora de recogida', 'Destino',
+    'Hora de entrega', 'Transporte', 'Notas / comentarios', 'Estado',
+  ]) {
+    assert.ok(emailDetails.includes(detail), `detailed email summary should include ${detail}`);
+  }
+  const textDetails = email.text.slice(email.text.indexOf('Detalle de movimientos'));
+  assert.ok(textDetails.length > 0);
+  for (const detail of [
+    'Fecha:', 'Generador:', 'Origen:', 'Hora de recogida:', 'Destino:',
+    'Hora de entrega:', 'Transporte:', 'Notas / comentarios:', 'Estado:',
+  ]) {
+    assert.ok(textDetails.includes(detail), `plain-text email summary should include ${detail}`);
+  }
+  assert.ok(textDetails.includes('Registrado por: —'));
   assert.doesNotMatch(email.html, /display:\s*(grid|flex)/i);
 });
 
@@ -116,6 +134,8 @@ test('shows generator locations in empty-week cells and a useful zero-count summ
   assert.equal((email.html.match(/Ubicación: Almacén/g) ?? []).length, 7);
   assert.equal((email.text.match(/Ubicación: Almacén/g) ?? []).length, 7);
   assert.ok(email.html.indexOf('Calendario semanal de movimientos') < email.html.indexOf('Resumen semanal'));
+  assert.ok(email.html.includes('No hay movimientos esta semana.'));
+  assert.ok(email.text.includes('No hay movimientos esta semana.'));
   for (const [detail, htmlDetail] of [
     ['Movimientos: 0', '<strong>Movimientos:</strong> 0'],
     ['Pendientes: 0', '<strong>Pendientes:</strong> 0'],

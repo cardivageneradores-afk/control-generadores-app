@@ -1,4 +1,5 @@
 import type { Generator, Movement } from './types';
+import { buildMovementSummary } from './movement-summary.ts';
 
 const TIME_ZONE = 'Europe/Madrid';
 
@@ -149,6 +150,10 @@ export function buildWeeklyMovementEmail(
   const pendingCount = weekMovements.filter(({ estado }) => estado === 'pendiente').length;
   const completedCount = weekMovements.filter(({ estado }) => estado === 'completado').length;
   const weekRange = `${weekDays[0].label} – ${weekDays[6].label}`;
+  const movementSummary = buildMovementSummary(weekMovements, generators, {
+    heading: 'Detalle de movimientos',
+    emptyMessage: 'No hay movimientos esta semana.',
+  });
 
   const calendarText = generatorRows.map((generator) => {
     const title = [generator.codigo, generator.modelo].filter(Boolean).join(' · ');
@@ -170,6 +175,8 @@ export function buildWeeklyMovementEmail(
     `Movimientos: ${weekMovements.length}`,
     `Pendientes: ${pendingCount}`,
     `Completados: ${completedCount}`,
+    '',
+    movementSummary.text,
   ].join('\n');
 
   const headerCells = weekDays.map((day) => `
@@ -231,6 +238,11 @@ export function buildWeeklyMovementEmail(
             <strong>Movimientos:</strong> ${weekMovements.length}<br>
             <strong>Pendientes:</strong> ${pendingCount}<br>
             <strong>Completados:</strong> ${completedCount}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 0 12px 20px;">
+            ${movementSummary.html}
           </td>
         </tr>
       </tbody>

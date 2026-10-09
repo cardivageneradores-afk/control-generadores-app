@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Copy, LogOut, Mail, Pencil, Plus, Trash2, Users } from 'lucide-react';
-import { buildMovementSummary } from './lib/movement-summary';
+import { buildMovementSummary, getMovementDetailFields } from './lib/movement-summary';
 
 type Role = 'editor' | 'lector';
 type GeneratorStatus = 'estable' | 'en-oficina' | 'en-transito';
@@ -665,15 +665,26 @@ export default function Page() {
                 .sort((a, b) => b.fecha.localeCompare(a.fecha))
                 .map((movement) => {
                   const generator = state.generadores.find((gen) => gen.id === movement.generador_id);
+                  const details = getMovementDetailFields(movement);
                   return (
                     <div key={movement.id} className="movement-row">
-                      <span className="date-pill">{formatDate(movement.fecha)}</span>
-                      <span className="code-pill">{generator?.codigo ?? '—'}</span>
-                      <span className="route-pill">{movement.origen} → {movement.destino}</span>
-                      <span className={`state-pill ${movement.estado === 'completado' ? 'done' : 'pending'}`}>{movement.estado === 'completado' ? 'Completado' : 'Pendiente'}</span>
-                      {!isReadOnly && movement.estado === 'pendiente' ? (
-                        <button className="mini-button" onClick={() => openEditMovement(movement.id)}><Pencil size={12} /></button>
-                      ) : null}
+                      <div className="movement-row-main">
+                        <span className="date-pill">{formatDate(movement.fecha)}</span>
+                        <span className="code-pill">{generator?.codigo ?? '—'}</span>
+                        <span className="route-pill">{movement.origen} → {movement.destino}</span>
+                        <span className={`state-pill ${movement.estado === 'completado' ? 'done' : 'pending'}`}>{movement.estado === 'completado' ? 'Completado' : 'Pendiente'}</span>
+                        {!isReadOnly && movement.estado === 'pendiente' ? (
+                          <button className="mini-button" onClick={() => openEditMovement(movement.id)}><Pencil size={12} /></button>
+                        ) : null}
+                      </div>
+                      <div className="movement-details">
+                        {details.map(({ label, value }) => (
+                          <div key={label} className={`movement-detail${label === 'Notas / comentarios' ? ' comments' : ''}`}>
+                            <span className="movement-detail-label">{label}</span>
+                            <span className="movement-detail-value">{value}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   );
                 })}

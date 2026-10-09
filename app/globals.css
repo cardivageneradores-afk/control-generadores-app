@@ -398,12 +398,47 @@ h1, h2, h3, h4 {
 }
 
 .movement-row {
+  display: block;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.movement-row-main {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
+}
+
+.movement-details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin: 10px 8px 2px;
+}
+
+.movement-detail {
+  min-width: 0;
+}
+
+.movement-detail.comments {
+  grid-column: 1 / -1;
+}
+
+.movement-detail-label,
+.movement-detail-value {
+  display: block;
+}
+
+.movement-detail-label {
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.movement-detail-value {
+  overflow-wrap: anywhere;
+  font-size: 13px;
 }
 
 .date-pill,
@@ -923,9 +958,16 @@ textarea:focus-visible {
 }
 
 .movement-row {
-  gap: 9px;
   padding: 12px 4px;
   border-color: rgba(129, 144, 160, 0.16);
+}
+
+.movement-row-main {
+  gap: 9px;
+}
+
+.movement-details {
+  margin: 10px 4px 2px;
 }
 
 .date-pill,
@@ -1121,6 +1163,12 @@ textarea:focus-visible {
 
   .calendar-actions {
     width: 100%;
+  }
+
+  .movement-details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
+    margin-inline: 0;
   }
 
   .calendar-actions .button {
