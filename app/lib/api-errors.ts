@@ -15,7 +15,7 @@ export function withStoreErrorHandling<Arguments extends unknown[]>(
       console.error(`[${endpoint}] Supabase persistence failure`, getSupabaseFailureMetadata(error.cause));
       const message =
         error.kind === 'schema'
-          ? 'La base de datos no está actualizada. Ejecuta todas las migraciones de Supabase, incluida 20261009105800_movement_times.sql.'
+          ? 'La base de datos no está actualizada. Ejecuta todas las migraciones de Supabase, incluida 20261009130000_movement_times.sql.'
           : error.kind === 'credentials'
             ? 'Las credenciales del servidor para Supabase no son válidas.'
             : error.kind === 'configuration'

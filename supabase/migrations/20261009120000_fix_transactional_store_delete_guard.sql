@@ -1,8 +1,3 @@
--- Nullable schedule details keep existing movements valid.
-alter table public.movimientos
-  add column if not exists hora_recogida time,
-  add column if not exists hora_entrega time;
-
 create or replace function public.replace_app_state(
   p_usuarios jsonb,
   p_generadores jsonb,
@@ -48,8 +43,6 @@ begin
     destino,
     tipo_transporte,
     notas,
-    hora_recogida,
-    hora_entrega,
     estado,
     usuario,
     creado_en,
@@ -63,8 +56,6 @@ begin
     destino,
     tipo_transporte,
     notas,
-    hora_recogida,
-    hora_entrega,
     estado,
     usuario,
     coalesce(creado_en, now()),
@@ -77,8 +68,6 @@ begin
     destino text,
     tipo_transporte text,
     notas text,
-    hora_recogida time,
-    hora_entrega time,
     estado text,
     usuario text,
     creado_en timestamptz,
