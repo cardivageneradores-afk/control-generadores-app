@@ -28,19 +28,19 @@ test('renders the current week calendar before a concise weekly summary', () => 
 
   assert.ok(email.html.indexOf('Calendario semanal de movimientos') < email.html.indexOf('Resumen semanal'));
   assert.ok(email.text.indexOf('Calendario semanal de movimientos') < email.text.indexOf('Resumen semanal'));
-  for (const detail of [
-    'Viernes, 09 de octubre de 2026',
-    'G-101 · Volvo 440',
-    'Almacén → Obra norte',
-    'Recogida: 08:30 · Entrega: 10:15',
-    'Local · pendiente',
-    'Comentarios: Llamar antes de llegar',
-    'Movimientos: 1',
-    'Pendientes: 1',
-    'Completados: 0',
+  for (const [textDetail, htmlDetail] of [
+    ['Viernes, 09 de octubre de 2026', 'Viernes, 09 de octubre de 2026'],
+    ['G-101 · Volvo 440', 'G-101 · Volvo 440'],
+    ['Almacén → Obra norte', 'Almacén → Obra norte'],
+    ['Recogida: 08:30 · Entrega: 10:15', 'Recogida: 08:30 · Entrega: 10:15'],
+    ['Transporte: Local · Estado: pendiente', 'Local · pendiente'],
+    ['Comentarios: Llamar antes de llegar', 'Comentarios: Llamar antes de llegar'],
+    ['Movimientos: 1', '<strong>Movimientos:</strong> 1'],
+    ['Pendientes: 1', '<strong>Pendientes:</strong> 1'],
+    ['Completados: 0', '<strong>Completados:</strong> 0'],
   ]) {
-    assert.ok(email.text.includes(detail), `plain text should include ${detail}`);
-    assert.ok(email.html.includes(detail), `HTML should include ${detail}`);
+    assert.ok(email.text.includes(textDetail), `plain text should include ${textDetail}`);
+    assert.ok(email.html.includes(htmlDetail), `HTML should include ${htmlDetail}`);
   }
   assert.match(email.html, /<table[^>]*role="presentation"/);
   assert.doesNotMatch(email.html, /display:\s*(grid|flex)/i);
@@ -67,8 +67,12 @@ test('shows every empty day and a useful zero-count summary for an empty week', 
 
   assert.equal((email.html.match(/>\s*Sin movimientos\s*<\/td>/g) ?? []).length, 7);
   assert.equal((email.text.match(/Sin movimientos/g) ?? []).length, 7);
-  for (const detail of ['Movimientos: 0', 'Pendientes: 0', 'Completados: 0']) {
+  for (const [detail, htmlDetail] of [
+    ['Movimientos: 0', '<strong>Movimientos:</strong> 0'],
+    ['Pendientes: 0', '<strong>Pendientes:</strong> 0'],
+    ['Completados: 0', '<strong>Completados:</strong> 0'],
+  ]) {
     assert.ok(email.text.includes(detail));
-    assert.ok(email.html.includes(detail));
+    assert.ok(email.html.includes(htmlDetail));
   }
 });
