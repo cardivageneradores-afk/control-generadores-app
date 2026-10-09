@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test app/lib/supabase-config.test.mjs"
+    "test": "node --experimental-strip-types --test app/lib/supabase-config.test.mjs app/lib/generator-deletion.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Copy, LogOut, Mail, Pencil, Plus, Users } from 'lucide-react';
+import { CheckCircle2, Copy, LogOut, Mail, Pencil, Plus, Trash2, Users } from 'lucide-react';
 
 type Role = 'editor' | 'lector';
 type GeneratorStatus = 'estable' | 'en-oficina' | 'en-transito';
@@ -290,6 +290,19 @@ export default function Page() {
     }
   };
 
+  const deleteGenerator = async (generator: Generator) => {
+    if (isReadOnly) return;
+    if (!window.confirm(`¿Seguro que quieres eliminar el generador ${generator.codigo}? No se puede eliminar si tiene movimientos registrados.`)) return;
+
+    try {
+      await api(`/api/generadores/${encodeURIComponent(generator.id)}`, { method: 'DELETE' });
+      setToast('Generador eliminado.');
+      await refresh();
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : 'No se pudo eliminar el generador.');
+    }
+  };
+
   const doLogin = async () => {
     try {
       const result = await api<{ me: User; ok: boolean }>('/api/login', {
@@ -544,6 +557,9 @@ export default function Page() {
                     {!isReadOnly ? (
                       <div className="generator-actions">
                         <button className="button ghost" onClick={() => openMoveModal(generator.id)}>+ Registrar movimiento</button>
+                        <button className="button danger" onClick={() => deleteGenerator(generator)}>
+                          <Trash2 size={15} /> Eliminar
+                        </button>
                       </div>
                     ) : (
                       <div className="readonly-note">Solo lectura</div>

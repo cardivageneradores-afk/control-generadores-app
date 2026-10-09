@@ -2,6 +2,8 @@
 
 Aplicación Next.js para gestionar generadores, movimientos, usuarios y resúmenes por email. La persistencia de producción usa Supabase desde el servidor; nunca se envía la service role key al navegador.
 
+Los usuarios con rol de editor pueden eliminar generadores desde su tarjeta en el panel. Para conservar el historial, no se permite eliminar un generador que tenga movimientos pendientes o completados.
+
 ## Desarrollo local
 
 ```bash
