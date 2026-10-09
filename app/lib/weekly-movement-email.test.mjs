@@ -34,7 +34,7 @@ test('renders the current week calendar before a concise weekly summary', () => 
     ['Almacén → Obra norte', 'Almacén → Obra norte'],
     ['Recogida: 08:30 · Entrega: 10:15', 'Recogida: 08:30 · Entrega: 10:15'],
     ['Transporte: Local · Estado: pendiente', 'Local · pendiente'],
-    ['Comentarios: Llamar antes de llegar', 'Comentarios: Llamar antes de llegar'],
+    ['Comentarios: Llamar antes de llegar', 'Comentarios: <span style="overflow-wrap: anywhere; word-break: break-word;">Llamar antes de llegar</span>'],
     ['Movimientos: 1', '<strong>Movimientos:</strong> 1'],
     ['Pendientes: 1', '<strong>Pendientes:</strong> 1'],
     ['Completados: 0', '<strong>Completados:</strong> 0'],
