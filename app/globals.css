@@ -760,6 +760,10 @@ textarea:focus-visible {
   gap: 16px;
 }
 
+.generator-disclosure-summary {
+  display: none;
+}
+
 .generator-card {
   padding: 18px;
   border-color: rgba(129, 144, 160, 0.2);
@@ -1087,6 +1091,15 @@ textarea:focus-visible {
 
   .section-label {
     margin-top: 26px;
+  }
+
+  .generator-section-title {
+    display: none;
+  }
+
+  .generator-disclosure-summary {
+    display: list-item;
+    cursor: pointer;
   }
 
   .generator-grid {

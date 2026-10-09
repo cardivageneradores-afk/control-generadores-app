@@ -139,6 +139,8 @@ export default function Page() {
   const [toast, setToast] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [stateError, setStateError] = useState<string | null>(null);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [isGeneratorsOpen, setIsGeneratorsOpen] = useState(false);
   const [login, setLogin] = useState({ email: 'admin@empresa.com', password: 'admin123' });
   const [loginError, setLoginError] = useState('');
 
@@ -171,6 +173,18 @@ export default function Page() {
     }, 0);
 
     return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 741px)');
+    const updateViewport = () => {
+      setIsDesktop(mediaQuery.matches);
+      if (!mediaQuery.matches) setIsGeneratorsOpen(false);
+    };
+
+    updateViewport();
+    mediaQuery.addEventListener('change', updateViewport);
+    return () => mediaQuery.removeEventListener('change', updateViewport);
   }, []);
 
   useEffect(() => {
@@ -535,57 +549,64 @@ export default function Page() {
             )}
           </section>
 
-          <section>
-            <p className="section-label">Generadores</p>
-            <div className="generator-grid">
-              {state.generadores.map((generator) => {
-                const related = state.movimientos.filter((m) => m.generador_id === generator.id && m.estado === 'pendiente');
-                return (
-                  <article key={generator.id} className="generator-card">
-                    <div className="generator-head">
-                      <div>
-                        <div className="generator-code">{generator.codigo}</div>
-                        <div className="generator-model">{generator.modelo}</div>
+          <section className="generator-section">
+            <p className="section-label generator-section-title">Generadores</p>
+            <details
+              className="generator-disclosure"
+              open={isDesktop || isGeneratorsOpen}
+              onToggle={(event) => setIsGeneratorsOpen(event.currentTarget.open)}
+            >
+              <summary className="section-label generator-disclosure-summary">Generadores</summary>
+              <div className="generator-grid">
+                {state.generadores.map((generator) => {
+                  const related = state.movimientos.filter((m) => m.generador_id === generator.id && m.estado === 'pendiente');
+                  return (
+                    <article key={generator.id} className="generator-card">
+                      <div className="generator-head">
+                        <div>
+                          <div className="generator-code">{generator.codigo}</div>
+                          <div className="generator-model">{generator.modelo}</div>
+                        </div>
+                        <span className={statusClass(generator.estado)}>{generator.estado === 'estable' ? 'Estable' : generator.estado === 'en-transito' ? 'En tránsito' : 'En oficina'}</span>
                       </div>
-                      <span className={statusClass(generator.estado)}>{generator.estado === 'estable' ? 'Estable' : generator.estado === 'en-transito' ? 'En tránsito' : 'En oficina'}</span>
-                    </div>
-                    <div className="location-box">
-                      <small>Ubicación actual</small>
-                      <div>{generator.ubicacion}</div>
-                    </div>
-                    {related.length ? (
-                      <div className="pending-box">
-                        <small>Movimientos pendientes ({related.length})</small>
-                        {related.map((movement) => (
-                          <div key={movement.id} className="pending-line">
-                            <div className="pending-route">{movement.origen} → {movement.destino}</div>
-                            <div className="pending-meta">
-                              <span>{formatDate(movement.fecha)}</span>
-                              {!isReadOnly ? (
-                                <>
-                                  <button className="mini-button" onClick={() => openEditMovement(movement.id)}><Pencil size={12} /></button>
-                                  <button className="mini-button primary" onClick={() => completeMovement(movement.id)}><CheckCircle2 size={12} /></button>
-                                </>
-                              ) : null}
+                      <div className="location-box">
+                        <small>Ubicación actual</small>
+                        <div>{generator.ubicacion}</div>
+                      </div>
+                      {related.length ? (
+                        <div className="pending-box">
+                          <small>Movimientos pendientes ({related.length})</small>
+                          {related.map((movement) => (
+                            <div key={movement.id} className="pending-line">
+                              <div className="pending-route">{movement.origen} → {movement.destino}</div>
+                              <div className="pending-meta">
+                                <span>{formatDate(movement.fecha)}</span>
+                                {!isReadOnly ? (
+                                  <>
+                                    <button className="mini-button" onClick={() => openEditMovement(movement.id)}><Pencil size={12} /></button>
+                                    <button className="mini-button primary" onClick={() => completeMovement(movement.id)}><CheckCircle2 size={12} /></button>
+                                  </>
+                                ) : null}
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-                    {!isReadOnly ? (
-                      <div className="generator-actions">
-                        <button className="button ghost" onClick={() => openMoveModal(generator.id)}>+ Registrar movimiento</button>
-                        <button className="button danger" onClick={() => deleteGenerator(generator)}>
-                          <Trash2 size={15} /> Eliminar
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="readonly-note">Solo lectura</div>
-                    )}
-                  </article>
-                );
-              })}
-            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                      {!isReadOnly ? (
+                        <div className="generator-actions">
+                          <button className="button ghost" onClick={() => openMoveModal(generator.id)}>+ Registrar movimiento</button>
+                          <button className="button danger" onClick={() => deleteGenerator(generator)}>
+                            <Trash2 size={15} /> Eliminar
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="readonly-note">Solo lectura</div>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            </details>
           </section>
 
           <section>
