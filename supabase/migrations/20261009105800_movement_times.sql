@@ -15,10 +15,10 @@ security definer
 set search_path = public, pg_catalog
 as $$
 begin
-  delete from public.movimientos;
-  delete from public.generadores;
-  delete from public.usuarios;
-  delete from public.destinatarios;
+  delete from public.movimientos where true;
+  delete from public.generadores where true;
+  delete from public.usuarios where true;
+  delete from public.destinatarios where true;
 
   insert into public.usuarios (id, email, nombre, rol, password_hash)
   select id, email, nombre, rol, password_hash
