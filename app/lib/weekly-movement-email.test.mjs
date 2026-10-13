@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildWeeklyMovementEmail, getWeeklyMovementEmailLogoUrl } from './weekly-movement-email.ts';
+import { buildWeeklyMovementEmail } from './weekly-movement-email.ts';
 
 const generator = {
   id: 'g-1',
@@ -50,28 +50,18 @@ function getMovementCard(cell, detail) {
   return cell.slice(cardStart, cardEnd);
 }
 
-test('uses an absolute public HTTPS URL for the email logo', () => {
-  assert.equal(
-    getWeeklyMovementEmailLogoUrl('https://generadores.example.com/app'),
-    'https://generadores.example.com/cardiva-logo.png',
-  );
-  assert.equal(getWeeklyMovementEmailLogoUrl('http://localhost:3000'), undefined);
-  assert.equal(getWeeklyMovementEmailLogoUrl(undefined), undefined);
-  assert.throws(() => getWeeklyMovementEmailLogoUrl('invalid URL'));
-});
-
 test('renders a generator-by-date grid with movement details in the matching cell', () => {
   const secondGenerator = { ...generator, id: 'g-2', codigo: 'G-202', ubicacion: 'Taller' };
   const email = buildWeeklyMovementEmail(
     [movement],
     [generator, secondGenerator],
     new Date('2026-10-09T10:00:00Z'),
-    { logoUrl: 'https://generadores.example.com/cardiva-logo.png' },
+    { logoCid: 'cardiva-logo' },
   );
 
   assert.ok(email.html.indexOf('Calendario semanal de movimientos') < email.html.indexOf('Resumen semanal'));
   assert.ok(email.text.indexOf('Calendario semanal de movimientos') < email.text.indexOf('Resumen semanal'));
-  assert.match(email.html, /<img src="https:\/\/generadores\.example\.com\/cardiva-logo\.png" alt="Cardiva"/);
+  assert.match(email.html, /<img src="cid:cardiva-logo" alt="Cardiva"/);
   assert.ok(!email.text.includes('cardiva-logo.png'));
   assert.equal((email.html.match(/<th scope="col"/g) ?? []).length, 8);
   assert.equal((email.html.match(/class="generator-row"/g) ?? []).length, 2);

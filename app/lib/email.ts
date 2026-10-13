@@ -1,4 +1,6 @@
 import 'server-only';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { Resend } from 'resend';
 import { deliverSummaryEmail } from './email-delivery';
 import type { SummaryEmailMessage } from './email-delivery';
@@ -13,7 +15,20 @@ export function sendSummaryEmail(message: SummaryEmailMessage) {
     allowDemo: process.env.NODE_ENV !== 'production' && process.env.ALLOW_DEMO_EMAIL === 'true',
     message,
     send: resend && from
-      ? (email) => resend.emails.send(email)
+      ? async (email) => {
+        if (!email.html.includes('src="cid:cardiva-logo"')) {
+          return resend.emails.send(email);
+        }
+        const logo = await readFile(join(process.cwd(), 'public', 'cardiva-logo.png'));
+        return resend.emails.send({
+          ...email,
+          attachments: [{
+            content: logo.toString('base64'),
+            filename: 'cardiva-logo.png',
+            contentId: 'cardiva-logo',
+          }],
+        });
+      }
       : undefined,
   });
 }

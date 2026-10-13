@@ -3,6 +3,11 @@ export type SummaryEmailMessage = {
   subject: string;
   html: string;
   text: string;
+  attachments?: Array<{
+    content: string;
+    filename: string;
+    contentId?: string;
+  }>;
 };
 
 type SendResult = {

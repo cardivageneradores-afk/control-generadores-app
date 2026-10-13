@@ -49,6 +49,32 @@ test('sends with the configured sender and returns the Resend message id', async
   assert.equal(result.mode, 'resend');
 });
 
+test('passes inline image attachments through to the email provider', async () => {
+  const inlineMessage = {
+    ...message,
+    html: '<img src="cid:cardiva-logo" alt="Cardiva">',
+    attachments: [{
+      content: 'aW1hZ2U=',
+      filename: 'cardiva-logo.png',
+      contentId: 'cardiva-logo',
+    }],
+  };
+  let sentMessage;
+
+  await deliverSummaryEmail({
+    apiKey: 'test-key',
+    from: 'mail@example.com',
+    allowDemo: false,
+    message: inlineMessage,
+    send: async (payload) => {
+      sentMessage = payload;
+      return { data: { id: 'email-inline-logo' }, error: null };
+    },
+  });
+
+  assert.deepEqual(sentMessage.attachments, inlineMessage.attachments);
+});
+
 test('surfaces provider rejection details and suggests configuration checks', async () => {
   await assert.rejects(
     deliverSummaryEmail({
