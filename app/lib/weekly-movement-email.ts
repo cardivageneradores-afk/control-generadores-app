@@ -9,6 +9,11 @@ type WeekDay = {
   shortLabel: string;
 };
 
+type EmailSender = {
+  nombre: string;
+  email: string;
+};
+
 function escapeHtml(value: string) {
   return value
     .replaceAll('&', '&amp;')
@@ -70,6 +75,7 @@ function formatMovementText(movement: Movement, generator?: Generator) {
     .join(' · ');
   return [
     `Movimiento ${movement.id} · ${title}`,
+    ...(movement.editado_en ? ['[MOVIMIENTO EDITADO]'] : []),
     `${movement.origen} → ${movement.destino}`,
     `Recogida: ${formatTime(movement.hora_recogida)} · Entrega: ${formatTime(movement.hora_entrega)}`,
     `Transporte: ${movement.tipo_transporte} · Estado: ${movement.estado}`,
@@ -86,13 +92,18 @@ function transportColor(type: Movement['tipo_transporte']) {
 function formatMovementHtml(movement: Movement) {
   const comment = movement.notas?.trim() || 'Sin comentarios';
   const color = transportColor(movement.tipo_transporte);
+  const isEdited = Boolean(movement.editado_en);
+  const highlightStyle = isEdited
+    ? 'border: 2px solid #c2410c; background-color: #fff7ed;'
+    : 'border: 1px solid #dbe3ee;';
 
   return `
-    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; margin: 0 0 6px; border: 1px solid #dbe3ee; border-collapse: collapse;">
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; margin: 0 0 6px; ${highlightStyle} border-collapse: collapse;">
       <tbody>
         <tr>
-          <td style="padding: 7px; border-left: 3px solid ${color}; font-family: Arial, sans-serif; color: #111827; font-size: 11px; line-height: 1.4; word-break: break-word;">
+          <td style="padding: 7px; border-left: ${isEdited ? '5px solid #c2410c' : `3px solid ${color}`}; font-family: Arial, sans-serif; color: #111827; font-size: 11px; line-height: 1.4; word-break: break-word;">
             <strong>${escapeHtml(`Movimiento ${movement.id}`)}</strong><br>
+            ${isEdited ? '<strong style="color: #9a3412; background-color: #ffedd5;">MOVIMIENTO EDITADO</strong><br>' : ''}
             <span style="color: ${color};">${escapeHtml(movement.tipo_transporte)}</span><br>
             <strong style="color: ${color};">${escapeHtml(`${movement.origen} → ${movement.destino}`)}</strong><br>
             Recogida: ${escapeHtml(formatTime(movement.hora_recogida))}<br>
@@ -110,6 +121,7 @@ export function buildWeeklyMovementEmail(
   movements: Movement[],
   generators: Generator[],
   now = new Date(),
+  sender?: EmailSender,
 ) {
   const weekDays = getWeekDays(now);
   const weekDates = new Set(weekDays.map((day) => day.date));
@@ -153,6 +165,9 @@ export function buildWeeklyMovementEmail(
   const movementSummary = buildMovementSummary(weekMovements, generators, {
     heading: 'Detalle de movimientos',
     emptyMessage: 'No hay movimientos esta semana.',
+    highlightedMovementIds: weekMovements
+      .filter((movement) => movement.editado_en)
+      .map((movement) => movement.id),
   });
 
   const calendarText = generatorRows.map((generator) => {
@@ -168,6 +183,7 @@ export function buildWeeklyMovementEmail(
   }).join('\n\n');
   const text = [
     `Calendario semanal de movimientos · ${weekRange}`,
+    ...(sender ? [`Enviado por: ${sender.nombre} (${sender.email})`] : []),
     '',
     calendarText || 'Sin generadores',
     '',
@@ -213,6 +229,7 @@ export function buildWeeklyMovementEmail(
           <td style="padding: 20px 12px 12px;">
             <h1 style="margin: 0; font-family: Arial, sans-serif; color: #111827; font-size: 22px; line-height: 1.3;">Calendario semanal de movimientos</h1>
             <p style="margin: 6px 0 16px; font-family: Arial, sans-serif; color: #4b5563; font-size: 14px;">${escapeHtml(weekRange)}</p>
+            ${sender ? `<p style="margin: 0 0 8px; font-family: Arial, sans-serif; color: #4b5563; font-size: 12px;">Enviado por: <strong>${escapeHtml(sender.nombre)}</strong> (${escapeHtml(sender.email)})</p>` : ''}
           </td>
         </tr>
         <tr>

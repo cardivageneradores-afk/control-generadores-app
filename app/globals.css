@@ -744,7 +744,13 @@ textarea:focus-visible {
 }
 
 .topbar-actions {
-  gap: 8px;
+  gap: 6px;
+}
+
+.topbar-actions .button {
+  min-height: 38px;
+  padding: 6px 10px;
+  font-size: 12px;
 }
 
 .user-banner {
@@ -1123,7 +1129,8 @@ textarea:focus-visible {
 
   .topbar-actions .button {
     width: 100%;
-    padding-inline: 9px;
+    min-height: 38px;
+    padding-inline: 8px;
     font-size: 12px;
   }
 

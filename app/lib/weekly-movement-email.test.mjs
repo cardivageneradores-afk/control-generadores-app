@@ -42,6 +42,14 @@ function getCalendarCell(html, key) {
   assert.fail(`calendar cell ${key} should have a closing tag`);
 }
 
+function getMovementCard(cell, id) {
+  const titleIndex = cell.indexOf(`Movimiento ${id}`);
+  assert.notEqual(titleIndex, -1, `movement ${id} should exist in the calendar cell`);
+  const cardStart = cell.lastIndexOf('<table', titleIndex);
+  const cardEnd = cell.indexOf('</table>', titleIndex) + '</table>'.length;
+  return cell.slice(cardStart, cardEnd);
+}
+
 test('renders a generator-by-date grid with movement details in the matching cell', () => {
   const secondGenerator = { ...generator, id: 'g-2', codigo: 'G-202', ubicacion: 'Taller' };
   const email = buildWeeklyMovementEmail(
@@ -144,6 +152,39 @@ test('shows generator locations in empty-week cells and a useful zero-count summ
     assert.ok(email.text.includes(detail));
     assert.ok(email.html.includes(htmlDetail));
   }
+});
+
+test('highlights edited movements but leaves new movements unmarked and identifies the sender', () => {
+  const edited = { ...movement, editado_en: '2026-10-09T10:30:00.000Z' };
+  const email = buildWeeklyMovementEmail(
+    [edited, { ...movement, id: 'm-new', destino: 'Obra sur' }],
+    [generator],
+    new Date('2026-10-09T10:00:00Z'),
+    { nombre: 'Ana <Admin>', email: 'ana@example.com' },
+  );
+  const fridayCell = getCalendarCell(email.html, 'g-1:2026-10-09');
+  const editedMovement = getMovementCard(fridayCell, 'm-1');
+  const newMovement = getMovementCard(fridayCell, 'm-new');
+
+  assert.match(editedMovement, /MOVIMIENTO EDITADO/);
+  assert.match(editedMovement, /border: 2px solid #c2410c/);
+  assert.doesNotMatch(newMovement, /MOVIMIENTO EDITADO/);
+  assert.match(email.html, /Enviado por: <strong>Ana &lt;Admin&gt;<\/strong> \(ana@example\.com\)/);
+  assert.ok(email.text.includes('Enviado por: Ana <Admin> (ana@example.com)'));
+  assert.match(email.text, /\[MOVIMIENTO EDITADO\]/);
+  assert.ok(email.html.includes('aria-label="Movimiento editado"'));
+
+  const nextWeekEmail = buildWeeklyMovementEmail(
+    [
+      { ...edited, fecha: '2026-10-16' },
+      { ...movement, id: 'm-created-next-week', fecha: '2026-10-16' },
+    ],
+    [generator],
+    new Date('2026-10-16T10:00:00Z'),
+  );
+  const nextWeekCell = getCalendarCell(nextWeekEmail.html, 'g-1:2026-10-16');
+  assert.match(getMovementCard(nextWeekCell, 'm-1'), /MOVIMIENTO EDITADO/);
+  assert.doesNotMatch(getMovementCard(nextWeekCell, 'm-created-next-week'), /MOVIMIENTO EDITADO/);
 });
 
 test('escapes dynamic HTML values and preserves readable plain text and long comments', () => {

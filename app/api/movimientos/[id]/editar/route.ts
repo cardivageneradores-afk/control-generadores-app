@@ -50,6 +50,7 @@ export const POST = withStoreErrorHandling(async (request: Request, { params }: 
         notas: String(body.notas ?? movement.notas ?? '').trim() || undefined,
         hora_recogida: hasPickupTime ? horaRecogida.value : movement.hora_recogida,
         hora_entrega: hasDeliveryTime ? horaEntrega.value : movement.hora_entrega,
+        editado_en: new Date().toISOString(),
       };
     }),
   };

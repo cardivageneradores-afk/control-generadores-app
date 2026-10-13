@@ -33,6 +33,7 @@ export interface Movement {
   usuario?: string;
   creado_en?: string;
   completado_en?: string;
+  editado_en?: string | null;
 }
 
 export interface AppState {

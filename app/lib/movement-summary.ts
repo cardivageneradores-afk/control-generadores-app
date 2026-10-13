@@ -4,6 +4,7 @@ type SummaryField = { label: string; value: string };
 type MovementSummaryOptions = {
   heading?: string;
   emptyMessage?: string;
+  highlightedMovementIds?: readonly string[];
 };
 
 function formatDate(date: string) {
@@ -63,9 +64,14 @@ function getSummaryFields(movement: Movement, generator?: Generator): SummaryFie
 export function buildMovementSummary(
   movements: Movement[],
   generators: Generator[],
-  { heading = 'Resumen de movimientos', emptyMessage = 'No hay movimientos registrados.' }: MovementSummaryOptions = {},
+  {
+    heading = 'Resumen de movimientos',
+    emptyMessage = 'No hay movimientos registrados.',
+    highlightedMovementIds = [],
+  }: MovementSummaryOptions = {},
 ) {
   const orderedMovements = [...movements].sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const highlightedIds = new Set(highlightedMovementIds);
   if (!orderedMovements.length) {
     return {
       text: `${heading}:\n\n${emptyMessage}`,
@@ -77,14 +83,17 @@ export function buildMovementSummary(
     const generator = generators.find((item) => item.id === movement.generador_id);
     const fields = getSummaryFields(movement, generator);
     const title = generator?.codigo ?? movement.generador_id;
+    const isHighlighted = highlightedIds.has(movement.id);
     return {
       text: [
         `Movimiento ${movement.id} · ${title}`,
+        ...(isHighlighted ? ['[MOVIMIENTO EDITADO]'] : []),
         ...fields.map(({ label, value }) => `${label}: ${value}`),
       ].join('\n'),
       html: `
-        <section style="margin: 0 0 20px;">
+        <section${isHighlighted ? ' aria-label="Movimiento editado"' : ''} style="margin: 0 0 20px;${isHighlighted ? ' padding: 10px; border: 2px solid #c2410c; border-radius: 8px; background-color: #fff7ed;' : ''}">
           <h3 style="margin: 0 0 8px;">Movimiento ${escapeHtml(movement.id)} · ${escapeHtml(title)}</h3>
+          ${isHighlighted ? '<p style="margin: 0 0 8px; color: #9a3412; font-family: Arial, sans-serif; font-size: 12px; font-weight: 700;">MOVIMIENTO EDITADO</p>' : ''}
           <table border="1" cellpadding="6" style="border-collapse: collapse; width: 100%;">
             <tbody>
               ${fields.map(({ label, value }) => `<tr><th align="left">${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`).join('')}

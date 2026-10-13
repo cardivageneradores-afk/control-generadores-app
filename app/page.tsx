@@ -36,6 +36,7 @@ interface Movement {
   hora_entrega?: string;
   estado: MovementStatus;
   usuario?: string;
+  editado_en?: string | null;
 }
 
 interface AppState {

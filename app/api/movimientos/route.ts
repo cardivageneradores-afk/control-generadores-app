@@ -50,6 +50,7 @@ export const POST = withStoreErrorHandling(async (request: Request) => {
         estado: 'pendiente' as const,
         usuario: editor.nombre,
         creado_en: new Date().toISOString(),
+        editado_en: null,
       },
     ],
   };

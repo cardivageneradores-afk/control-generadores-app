@@ -7,7 +7,8 @@ import { sendSummaryEmail } from '@/app/lib/email';
 import { buildWeeklyMovementEmail } from '@/app/lib/weekly-movement-email';
 
 export const POST = withStoreErrorHandling(async (request: Request) => {
-  if (!(await getEditorFromRequest(request))) {
+  const editor = await getEditorFromRequest(request);
+  if (!editor) {
     return NextResponse.json({ error: 'Necesitas una sesión de editor.' }, { status: 403 });
   }
 
@@ -17,7 +18,7 @@ export const POST = withStoreErrorHandling(async (request: Request) => {
   }
   const recipients = state.destinatarios;
 
-  const summary = buildWeeklyMovementEmail(state.movimientos, state.generadores);
+  const summary = buildWeeklyMovementEmail(state.movimientos, state.generadores, new Date(), editor);
 
   try {
     const response = await sendSummaryEmail({

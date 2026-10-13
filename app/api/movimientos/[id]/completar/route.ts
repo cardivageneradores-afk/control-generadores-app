@@ -10,6 +10,7 @@ export const POST = withStoreErrorHandling(async (request: Request, { params }: 
 
   const { id } = await params;
   const state = await getStore();
+  const completedAt = new Date().toISOString();
   const next = {
     ...state,
     movimientos: state.movimientos.map((movement) =>
@@ -17,7 +18,8 @@ export const POST = withStoreErrorHandling(async (request: Request, { params }: 
         ? {
             ...movement,
             estado: 'completado' as const,
-            completado_en: new Date().toISOString(),
+            completado_en: completedAt,
+            editado_en: completedAt,
           }
         : movement,
     ),
