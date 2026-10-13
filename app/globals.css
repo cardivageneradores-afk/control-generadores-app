@@ -384,13 +384,13 @@ h1, h2, h3, h4 {
 }
 
 .calendar-cell.movement {
-  color: #0a1b18;
-  font-weight: 700;
+  display: block;
+  padding: 6px;
 }
 
-.calendar-cell.own { background: var(--teal); }
-.calendar-cell.local { background: var(--amber); }
-.calendar-cell.nacex { background: var(--purple); }
+.calendar-movement.own { background: var(--teal); }
+.calendar-movement.local { background: var(--amber); }
+.calendar-movement.nacex { background: var(--purple); }
 
 .movement-list {
   margin-top: 12px;
@@ -994,8 +994,75 @@ textarea:focus-visible {
 }
 
 .calendar-cell.movement {
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+.calendar-movements {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  width: 100%;
+}
+
+.calendar-movement {
+  display: grid;
+  gap: 3px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 7px;
+  color: #0a1b18;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.calendar-movement-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font-weight: 700;
+}
+
+.calendar-movement-status {
+  padding: 2px 4px;
+  border-radius: 999px;
+  background: rgba(10, 27, 24, 0.1);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.calendar-movement-status.done {
+  background: var(--green-dark);
+  color: var(--green);
+}
+
+.calendar-movement-status.pending {
+  background: var(--teal-dark);
+  color: var(--teal);
+}
+
+.calendar-route {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.calendar-times {
+  display: grid;
+  gap: 1px;
+  font-size: 9px;
+}
+
+.calendar-comments {
+  margin: 0;
+  padding-top: 3px;
+  border-top: 1px solid rgba(10, 27, 24, 0.16);
+  font-size: 9px;
 }
 
 .movement-list {
@@ -1242,6 +1309,10 @@ textarea:focus-visible {
 
   .calendar-grid {
     min-width: 820px;
+  }
+
+  .calendar-movement {
+    padding: 5px;
   }
 
   .movement-row {

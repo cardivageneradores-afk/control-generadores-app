@@ -1,7 +1,7 @@
 "use client";
 
 import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Copy, LogOut, Mail, Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { buildMovementSummary, getMovementDetailFields } from './lib/movement-summary';
 
@@ -107,10 +107,14 @@ function statusClass(status: GeneratorStatus) {
   return 'pill office';
 }
 
+function transportTone(type: TransportType) {
+  if (type === 'Local') return 'local';
+  if (type === 'Nacex') return 'nacex';
+  return 'own';
+}
+
 function transportClass(type: TransportType) {
-  if (type === 'Local') return 'transport-tag local';
-  if (type === 'Nacex') return 'transport-tag nacex';
-  return 'transport-tag own';
+  return `transport-tag ${transportTone(type)}`;
 }
 
 export default function Page() {
@@ -654,24 +658,56 @@ export default function Page() {
                 </div>
               ))}
               {state.generadores.map((generator) => (
-                <>
+                <Fragment key={generator.id}>
                   <div key={`${generator.id}-code`} className="calendar-cell row-label">{generator.codigo}</div>
                   {weekDates.map((date) => {
                     const iso = isoDate(date);
-                    const movement = state.movimientos.find(
-                      (item) => item.generador_id === generator.id && item.fecha === iso && item.estado === 'pendiente',
-                    );
-                    return movement ? (
-                      <div key={`${generator.id}-${iso}`} className={`calendar-cell movement ${movement.tipo_transporte === 'Propio' ? 'own' : movement.tipo_transporte === 'Local' ? 'local' : 'nacex'}`} title={`${movement.origen} → ${movement.destino}`}>
-                        {movement.origen} → {movement.destino}
-                      </div>
-                    ) : (
-                      <div key={`${generator.id}-${iso}`} className="calendar-cell empty-cell">
-                        {generator.ubicacion}
+                    const movements = state.movimientos
+                      .filter((item) => item.generador_id === generator.id && item.fecha === iso)
+                      .sort((a, b) => {
+                        const timeOrder = (a.hora_recogida ?? '').localeCompare(b.hora_recogida ?? '');
+                        return timeOrder || a.id.localeCompare(b.id);
+                      });
+
+                    return (
+                      <div
+                        key={`${generator.id}-${iso}`}
+                        className={`calendar-cell ${movements.length ? 'movement' : 'empty-cell'}`}
+                      >
+                        {movements.length ? (
+                          <div className="calendar-movements">
+                            {movements.map((movement) => {
+                              const [pickup, delivery] = getMovementDetailFields(movement);
+                              return (
+                                <article
+                                  key={movement.id}
+                                  className={`calendar-movement ${transportTone(movement.tipo_transporte)}`}
+                                >
+                                  <div className="calendar-movement-header">
+                                    <span>{movement.tipo_transporte}</span>
+                                    <span className={`calendar-movement-status ${movement.estado === 'completado' ? 'done' : 'pending'}`}>
+                                      {movement.estado === 'completado' ? 'Completado' : 'Pendiente'}
+                                    </span>
+                                  </div>
+                                  <div className="calendar-route">{movement.origen} → {movement.destino}</div>
+                                  <div className="calendar-times">
+                                    <span>Recogida: {pickup.value}</span>
+                                    <span>Entrega: {delivery.value}</span>
+                                  </div>
+                                  {movement.notas?.trim() ? (
+                                    <p className="calendar-comments">{movement.notas.trim()}</p>
+                                  ) : null}
+                                </article>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="calendar-location">{generator.ubicacion}</span>
+                        )}
                       </div>
                     );
                   })}
-                </>
+                </Fragment>
               ))}
             </div>
           </section>
