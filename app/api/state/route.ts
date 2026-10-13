@@ -10,8 +10,10 @@ export const GET = withStoreErrorHandling(async (request: Request) => {
   }
 
   const state = await getStore();
+  const { revision, ...publicState } = state;
+  void revision;
   return NextResponse.json({
-    ...state,
+    ...publicState,
     usuarios: state.usuarios.map(({ passwordHash: _passwordHash, ...user }) => user),
     me,
   });

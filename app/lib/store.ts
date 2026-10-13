@@ -1,4 +1,5 @@
 import { DEMO_STATE } from './demo-data';
+import { replaceRevisionedState, StaleStateError } from './revisioned-write';
 import {
   classifySupabaseFailure,
   getPersistenceConfigurationError,
@@ -21,8 +22,29 @@ export class StoreError extends Error {
   }
 }
 
+export class StoreConflictError extends Error {
+  constructor() {
+    super('La información cambió antes de guardar. Actualiza los datos y vuelve a intentarlo.');
+    this.name = 'StoreConflictError';
+  }
+}
+
 function clone<T>(value: T): T {
   return structuredClone(value);
+}
+
+interface PersistedStateSnapshot {
+  revision: number | string;
+  usuarios: Array<{
+    id: string;
+    email: string;
+    nombre: string;
+    rol: User['rol'];
+    password_hash: string;
+  }>;
+  generadores: Generator[];
+  movimientos: Movement[];
+  destinatarios: string[];
 }
 
 function assertSupabase() {
@@ -40,55 +62,91 @@ function assertSupabase() {
 export async function getStore(): Promise<AppState> {
   if (!assertSupabase()) return clone(DEMO_STATE);
 
-  const [users, generators, movements, recipients] = await Promise.all([
-    supabaseAdmin!.from('usuarios').select('id,email,nombre,rol,password_hash'),
-    supabaseAdmin!.from('generadores').select('id,codigo,modelo,ubicacion,estado'),
-    supabaseAdmin!.from('movimientos').select('id,generador_id,fecha,origen,destino,tipo_transporte,notas,hora_recogida,hora_entrega,estado,usuario,creado_en,completado_en,editado_en').order('fecha'),
-    supabaseAdmin!.from('destinatarios').select('email').order('email'),
-  ]);
-  for (const result of [users, generators, movements, recipients]) {
-    if (result.error) {
-      throw new StoreError('Error leyendo Supabase.', result.error);
-    }
+  const { data, error } = await supabaseAdmin!.rpc('read_app_state');
+  if (error) throw new StoreError('Error leyendo Supabase.', error);
+  if (!data || typeof data !== 'object') {
+    throw new StoreError('La base de datos devolvió un estado no válido.', new Error('Invalid app state snapshot.'));
   }
+  const snapshot = data as Partial<PersistedStateSnapshot>;
+  const revision =
+    typeof snapshot.revision === 'number'
+      ? snapshot.revision
+      : typeof snapshot.revision === 'string' && /^\d+$/.test(snapshot.revision)
+        ? Number(snapshot.revision)
+        : Number.NaN;
+  if (
+    !Number.isSafeInteger(revision) ||
+    revision < 0 ||
+    !Array.isArray(snapshot.usuarios) ||
+    !Array.isArray(snapshot.generadores) ||
+    !Array.isArray(snapshot.movimientos) ||
+    !Array.isArray(snapshot.destinatarios) ||
+    !snapshot.destinatarios.every((email) => typeof email === 'string')
+  ) {
+    throw new StoreError('La base de datos devolvió un estado no válido.', new Error('Invalid app state snapshot.'));
+  }
+  const users = snapshot.usuarios as PersistedStateSnapshot['usuarios'];
+  const generators = snapshot.generadores as PersistedStateSnapshot['generadores'];
+  const movements = snapshot.movimientos as PersistedStateSnapshot['movimientos'];
 
   return {
-    usuarios: (users.data ?? []).map((row) => ({
+    revision,
+    usuarios: users.map((row) => ({
       id: row.id,
       email: row.email,
       nombre: row.nombre,
       rol: row.rol,
       passwordHash: row.password_hash,
     })) as User[],
-    generadores: (generators.data ?? []) as Generator[],
-    movimientos: (movements.data ?? []) as Movement[],
-    ubicaciones: Array.from(new Set((generators.data ?? []).map((row) => row.ubicacion))).sort(),
-    destinatarios: (recipients.data ?? []).map((row) => row.email),
+    generadores: generators as Generator[],
+    movimientos: movements as Movement[],
+    ubicaciones: Array.from(new Set(generators.map((row) => row.ubicacion))).sort(),
+    destinatarios: snapshot.destinatarios,
     me: null,
   };
 }
 
 export async function setStore(next: AppState): Promise<AppState> {
-  if (!assertSupabase()) return clone(next);
+  if (!assertSupabase()) return clone({ ...next, revision: next.revision + 1 });
   const client = supabaseAdmin!;
-  const { error } = await client.rpc('replace_app_state', {
-    p_usuarios: next.usuarios.map((user) => ({
-      id: user.id, email: user.email, nombre: user.nombre, rol: user.rol, password_hash: user.passwordHash,
-    })),
-    p_generadores: next.generadores,
-    p_movimientos: next.movimientos.map((movement) => ({
-      id: movement.id, generador_id: movement.generador_id, fecha: movement.fecha, origen: movement.origen,
-      destino: movement.destino, tipo_transporte: movement.tipo_transporte, notas: movement.notas ?? null,
-      hora_recogida: movement.hora_recogida ?? null, hora_entrega: movement.hora_entrega ?? null,
-      estado: movement.estado, usuario: movement.usuario ?? null, creado_en: movement.creado_en ?? null,
-      completado_en: movement.completado_en ?? null, editado_en: movement.editado_en ?? null,
-    })),
-    p_destinatarios: next.destinatarios,
-  });
-  if (error) {
+  let revision: number;
+  try {
+    revision = await replaceRevisionedState(
+      (name, parameters) => client.rpc(name, parameters),
+      next.revision,
+      {
+        p_usuarios: next.usuarios.map((user) => ({
+          id: user.id,
+          email: user.email,
+          nombre: user.nombre,
+          rol: user.rol,
+          password_hash: user.passwordHash,
+        })),
+        p_generadores: next.generadores,
+        p_movimientos: next.movimientos.map((movement) => ({
+          id: movement.id,
+          generador_id: movement.generador_id,
+          fecha: movement.fecha,
+          origen: movement.origen,
+          destino: movement.destino,
+          tipo_transporte: movement.tipo_transporte,
+          notas: movement.notas ?? null,
+          hora_recogida: movement.hora_recogida ?? null,
+          hora_entrega: movement.hora_entrega ?? null,
+          estado: movement.estado,
+          usuario: movement.usuario ?? null,
+          creado_en: movement.creado_en ?? null,
+          completado_en: movement.completado_en ?? null,
+          editado_en: movement.editado_en ?? null,
+        })),
+        p_destinatarios: next.destinatarios,
+      },
+    );
+  } catch (error) {
+    if (error instanceof StaleStateError) throw new StoreConflictError();
     throw new StoreError('Error guardando Supabase.', error);
   }
-  return clone(next);
+  return clone({ ...next, revision });
 }
 
 export async function updateStore(mutator: (state: AppState) => AppState) {

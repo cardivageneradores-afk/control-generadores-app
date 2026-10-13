@@ -1,6 +1,7 @@
 import type { AppState } from './types';
 
 export const DEMO_STATE: AppState = {
+  revision: 0,
   usuarios: [
     {
       id: 'u-admin',
