@@ -228,7 +228,7 @@ export function buildWeeklyMovementEmail(
       <tbody>
         <tr>
           <td style="padding: 20px 12px 12px;">
-            ${logoCid ? `<img src="cid:${escapeHtml(logoCid)}" alt="Cardiva" width="112" height="31" style="display: block; width: 112px; height: auto; margin: 0 0 16px;">` : ''}
+            ${logoCid ? `<img src="cid:${escapeHtml(logoCid)}" alt="Cardiva Generadores" width="112" height="31" style="display: block; width: 112px; height: auto; margin: 0 0 16px;">` : ''}
             <h1 style="margin: 0; font-family: Arial, sans-serif; color: #111827; font-size: 22px; line-height: 1.3;">Calendario semanal de movimientos</h1>
             <p style="margin: 6px 0 16px; font-family: Arial, sans-serif; color: #4b5563; font-size: 14px;">${escapeHtml(weekRange)}</p>
             ${sender ? `<p style="margin: 0 0 8px; font-family: Arial, sans-serif; color: #4b5563; font-size: 12px;">Enviado por: <strong>${escapeHtml(sender.nombre)}</strong> (${escapeHtml(sender.email)})</p>` : ''}

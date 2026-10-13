@@ -505,7 +505,7 @@ export default function Page() {
               <div className="topbar-brand">
                 <Image
                   src="/cardiva-logo.png"
-                  alt="Cardiva"
+                  alt="Cardiva Generadores"
                   width={224}
                   height={62}
                   className="brand-logo"

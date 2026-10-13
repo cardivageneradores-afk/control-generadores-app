@@ -771,11 +771,11 @@ textarea:focus-visible {
 }
 
 .topbar-actions .button.compact-action {
-  min-height: 32px;
-  gap: 5px;
-  padding: 4px 9px;
+  min-height: 28px;
+  gap: 4px;
+  padding: 3px 7px;
   border-radius: 7px;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -784,12 +784,12 @@ textarea:focus-visible {
   display: inline-flex;
   width: fit-content;
   min-height: 0;
-  gap: 7px;
+  gap: 6px;
   margin: 0 0 8px;
-  padding: 3px 8px;
-  border-color: rgba(129, 144, 160, 0.16);
-  border-radius: 999px;
-  background: rgba(29, 39, 51, 0.42);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
   font-size: 11px;
   line-height: 1.35;
@@ -1188,8 +1188,8 @@ textarea:focus-visible {
   }
 
   .topbar-actions .button.compact-action {
-    min-height: 30px;
-    padding: 4px 8px;
+    min-height: 28px;
+    padding: 3px 7px;
   }
 
   .user-banner {
