@@ -14,6 +14,11 @@ type EmailSender = {
   email: string;
 };
 
+type EmailOptions = {
+  sender?: EmailSender;
+  logoUrl?: string;
+};
+
 function escapeHtml(value: string) {
   return value
     .replaceAll('&', '&amp;')
@@ -21,6 +26,13 @@ function escapeHtml(value: string) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+export function getWeeklyMovementEmailLogoUrl(appUrl?: string) {
+  if (!appUrl) return undefined;
+  const parsedUrl = new URL(appUrl);
+  if (parsedUrl.protocol !== 'https:') return undefined;
+  return new URL('/cardiva-logo.png', parsedUrl.origin).toString();
 }
 
 function getLocalDate(date: Date) {
@@ -116,7 +128,7 @@ export function buildWeeklyMovementEmail(
   movements: Movement[],
   generators: Generator[],
   now = new Date(),
-  sender?: EmailSender,
+  { sender, logoUrl }: EmailOptions = {},
 ) {
   const weekDays = getWeekDays(now);
   const weekDates = new Set(weekDays.map((day) => day.date));
@@ -223,6 +235,7 @@ export function buildWeeklyMovementEmail(
       <tbody>
         <tr>
           <td style="padding: 20px 12px 12px;">
+            ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="Cardiva" width="112" height="31" style="display: block; width: 112px; height: auto; margin: 0 0 16px;">` : ''}
             <h1 style="margin: 0; font-family: Arial, sans-serif; color: #111827; font-size: 22px; line-height: 1.3;">Calendario semanal de movimientos</h1>
             <p style="margin: 6px 0 16px; font-family: Arial, sans-serif; color: #4b5563; font-size: 14px;">${escapeHtml(weekRange)}</p>
             ${sender ? `<p style="margin: 0 0 8px; font-family: Arial, sans-serif; color: #4b5563; font-size: 12px;">Enviado por: <strong>${escapeHtml(sender.nombre)}</strong> (${escapeHtml(sender.email)})</p>` : ''}

@@ -4,7 +4,7 @@ import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore } from '@/app/lib/store';
 import { EmailConfigurationError, EmailDeliveryError } from '@/app/lib/email-delivery';
 import { sendSummaryEmail } from '@/app/lib/email';
-import { buildWeeklyMovementEmail } from '@/app/lib/weekly-movement-email';
+import { buildWeeklyMovementEmail, getWeeklyMovementEmailLogoUrl } from '@/app/lib/weekly-movement-email';
 
 export const POST = withStoreErrorHandling(async (request: Request) => {
   const editor = await getEditorFromRequest(request);
@@ -18,7 +18,10 @@ export const POST = withStoreErrorHandling(async (request: Request) => {
   }
   const recipients = state.destinatarios;
 
-  const summary = buildWeeklyMovementEmail(state.movimientos, state.generadores, new Date(), editor);
+  const summary = buildWeeklyMovementEmail(state.movimientos, state.generadores, new Date(), {
+    sender: editor,
+    logoUrl: getWeeklyMovementEmailLogoUrl(process.env.NEXT_PUBLIC_APP_URL),
+  });
 
   try {
     const response = await sendSummaryEmail({

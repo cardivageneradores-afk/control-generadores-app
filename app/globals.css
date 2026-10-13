@@ -738,6 +738,23 @@ textarea:focus-visible {
   letter-spacing: -0.035em;
 }
 
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-logo {
+  display: block;
+  width: 112px;
+  height: auto;
+}
+
+.login-brand-logo {
+  width: 126px;
+  margin-bottom: 22px;
+}
+
 .topbar small {
   color: var(--text-dim);
   font-size: 13px;
@@ -1140,6 +1157,19 @@ textarea:focus-visible {
 
   .topbar h1 {
     font-size: 25px;
+  }
+
+  .topbar-brand {
+    gap: 10px;
+  }
+
+  .topbar-brand > div {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .topbar-brand .brand-logo {
+    width: 88px;
   }
 
   .topbar-actions {

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Copy, LogOut, Mail, Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { buildMovementSummary, getMovementDetailFields } from './lib/movement-summary';
@@ -461,6 +462,13 @@ export default function Page() {
       {!state.me ? (
         <div className="login-shell">
           <div className="login-box">
+            <Image
+              src="/cardiva-logo.png"
+              alt="Cardiva"
+              width={224}
+              height={62}
+              className="brand-logo login-brand-logo"
+            />
             <h3>Control de generadores</h3>
             <p>Accede con tu correo corporativo.</p>
             <div className="field">
@@ -494,8 +502,19 @@ export default function Page() {
                 <span>{state.me?.nombre ?? 'Invitado'}</span>
                 <span className="role">{state.me?.rol === 'editor' ? 'Editor' : 'Solo lectura'}</span>
               </div>
-              <h1>Control de generadores</h1>
-              <small>Movimientos y ubicación en tiempo real · Barcelona</small>
+              <div className="topbar-brand">
+                <Image
+                  src="/cardiva-logo.png"
+                  alt="Cardiva"
+                  width={224}
+                  height={62}
+                  className="brand-logo"
+                />
+                <div>
+                  <h1>Control de generadores</h1>
+                  <small>Movimientos y ubicación en tiempo real · Barcelona</small>
+                </div>
+              </div>
             </div>
             <div className="topbar-actions">
               <button className="button ghost compact-action" onClick={() => setShowUsers(true)}>

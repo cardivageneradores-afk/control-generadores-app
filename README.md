@@ -44,7 +44,7 @@ La app usa cuatro tablas (`usuarios`, `generadores`, `movimientos`, `destinatari
 ## Vercel
 
 1. Importa el repositorio en Vercel.
-2. Si la integración Supabase-Vercel ya creó `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`, el código los acepta sin duplicarlos. Para una configuración nueva, usa `SUPABASE_URL` y `SUPABASE_SECRET_KEY` (`sb_secret_...`) en Production (y Preview si procede). No dupliques la URL como `NEXT_PUBLIC_SUPABASE_URL` ni uses `NEXT_PUBLIC_SUPABASE_ANON_KEY` para estas rutas de servidor. Configura también `SESSION_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` y `NEXT_PUBLIC_APP_URL`. Solo durante el alta inicial añade `ADMIN_SETUP_TOKEN` en Production.
+2. Si la integración Supabase-Vercel ya creó `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`, el código los acepta sin duplicarlos. Para una configuración nueva, usa `SUPABASE_URL` y `SUPABASE_SECRET_KEY` (`sb_secret_...`) en Production (y Preview si procede). No dupliques la URL como `NEXT_PUBLIC_SUPABASE_URL` ni uses `NEXT_PUBLIC_SUPABASE_ANON_KEY` para estas rutas de servidor. Configura también `SESSION_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` y `NEXT_PUBLIC_APP_URL`. Usa en `NEXT_PUBLIC_APP_URL` el origen público HTTPS de la aplicación: el logo del email se carga desde `/cardiva-logo.png` en ese dominio, y se omite si la URL no es HTTPS. Solo durante el alta inicial añade `ADMIN_SETUP_TOKEN` en Production.
 3. Mantén `ALLOW_DEMO_DATA` y `ALLOW_DEMO_EMAIL` sin definir o en `false`.
 4. Despliega, realiza el alta en `/setup`, elimina `ADMIN_SETUP_TOKEN` y vuelve a desplegar. CI ejecuta `npm ci`, tests, lint y build mediante `.github/workflows/ci.yml`.
 
