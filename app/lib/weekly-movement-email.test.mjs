@@ -61,7 +61,7 @@ test('renders a generator-by-date grid with movement details in the matching cel
 
   assert.ok(email.html.indexOf('Calendario semanal de movimientos') < email.html.indexOf('Resumen semanal'));
   assert.ok(email.text.indexOf('Calendario semanal de movimientos') < email.text.indexOf('Resumen semanal'));
-  assert.match(email.html, /<img src="cid:cardiva-logo" alt="Cardiva"/);
+  assert.match(email.html, /<img src="cid:cardiva-logo" alt="Cardiva Generadores"/);
   assert.ok(!email.text.includes('cardiva-logo.png'));
   assert.equal((email.html.match(/<th scope="col"/g) ?? []).length, 8);
   assert.equal((email.html.match(/class="generator-row"/g) ?? []).length, 2);
@@ -140,6 +140,20 @@ test('keeps multiple same-day movements legible in one generator cell', () => {
   assert.ok(!email.html.includes(movement.id));
   assert.ok(!email.text.includes(movement.id));
   assert.ok(email.html.includes('Movimientos:</strong> 2'));
+});
+
+test('keeps technical movement IDs and movement-title lines out of both email formats', () => {
+  const movementId = 'm-1791559236349';
+  const email = buildWeeklyMovementEmail(
+    [{ ...movement, id: movementId }],
+    [generator],
+    new Date('2026-10-09T10:00:00Z'),
+  );
+
+  assert.doesNotMatch(email.html, new RegExp(movementId));
+  assert.doesNotMatch(email.text, new RegExp(movementId));
+  assert.doesNotMatch(email.html, /Movimiento m-1791559236349/);
+  assert.doesNotMatch(email.text, /Movimiento m-1791559236349/);
 });
 
 test('shows generator locations in empty-week cells and a useful zero-count summary', () => {
