@@ -42,11 +42,11 @@ function getCalendarCell(html, key) {
   assert.fail(`calendar cell ${key} should have a closing tag`);
 }
 
-function getMovementCard(cell, id) {
-  const titleIndex = cell.indexOf(`Movimiento ${id}`);
-  assert.notEqual(titleIndex, -1, `movement ${id} should exist in the calendar cell`);
-  const cardStart = cell.lastIndexOf('<table', titleIndex);
-  const cardEnd = cell.indexOf('</table>', titleIndex) + '</table>'.length;
+function getMovementCard(cell, detail) {
+  const detailIndex = cell.indexOf(detail);
+  assert.notEqual(detailIndex, -1, `movement detail ${detail} should exist in the calendar cell`);
+  const cardStart = cell.lastIndexOf('<table', detailIndex);
+  const cardEnd = cell.indexOf('</table>', detailIndex) + '</table>'.length;
   return cell.slice(cardStart, cardEnd);
 }
 
@@ -67,7 +67,6 @@ test('renders a generator-by-date grid with movement details in the matching cel
   const fridayCell = getCalendarCell(email.html, 'g-1:2026-10-09');
   assert.ok(email.html.includes('G-101 · Volvo 440'));
   for (const detail of [
-    'Movimiento m-1',
     'Almacén → Obra norte',
     'Local',
     'Recogida: 08:30',
@@ -79,6 +78,9 @@ test('renders a generator-by-date grid with movement details in the matching cel
     assert.ok(fridayCell.includes(detail), `matching cell should include ${detail}`);
     assert.ok(email.text.includes(detail), `plain text should include ${detail}`);
   }
+  assert.ok(!fridayCell.includes(movement.id));
+  assert.ok(!email.html.includes(movement.id));
+  assert.ok(!email.text.includes(movement.id));
   assert.ok(fridayCell.includes('style="color: #9a6700;">Almacén → Obra norte'));
   assert.ok(getCalendarCell(email.html, 'g-1:2026-10-05').includes('Ubicación: Almacén'));
   assert.ok(getCalendarCell(email.html, 'g-2:2026-10-09').includes('Ubicación: Taller'));
@@ -126,12 +128,14 @@ test('keeps multiple same-day movements legible in one generator cell', () => {
   );
   const fridayCell = getCalendarCell(email.html, 'g-1:2026-10-09');
 
-  assert.ok(fridayCell.indexOf('Movimiento m-1') < fridayCell.indexOf('Movimiento m-2'));
+  assert.ok(fridayCell.indexOf('Almacén → Obra norte') < fridayCell.indexOf('Obra norte → Almacén'));
   assert.ok(fridayCell.includes('Local'));
   assert.ok(fridayCell.includes('Nacex'));
   assert.ok(fridayCell.includes('Confirmar recepción'));
-  assert.ok(email.text.includes('Movimiento m-1'));
-  assert.ok(email.text.includes('Movimiento m-2'));
+  assert.ok(!email.html.includes(laterMovement.id));
+  assert.ok(!email.text.includes(laterMovement.id));
+  assert.ok(!email.html.includes(movement.id));
+  assert.ok(!email.text.includes(movement.id));
   assert.ok(email.html.includes('Movimientos:</strong> 2'));
 });
 
@@ -163,8 +167,8 @@ test('highlights edited movements but leaves new movements unmarked and identifi
     { nombre: 'Ana <Admin>', email: 'ana@example.com' },
   );
   const fridayCell = getCalendarCell(email.html, 'g-1:2026-10-09');
-  const editedMovement = getMovementCard(fridayCell, 'm-1');
-  const newMovement = getMovementCard(fridayCell, 'm-new');
+  const editedMovement = getMovementCard(fridayCell, 'Almacén → Obra norte');
+  const newMovement = getMovementCard(fridayCell, 'Almacén → Obra sur');
 
   assert.match(editedMovement, /MOVIMIENTO EDITADO/);
   assert.match(editedMovement, /border: 2px solid #c2410c/);
@@ -173,6 +177,10 @@ test('highlights edited movements but leaves new movements unmarked and identifi
   assert.ok(email.text.includes('Enviado por: Ana <Admin> (ana@example.com)'));
   assert.match(email.text, /\[MOVIMIENTO EDITADO\]/);
   assert.ok(email.html.includes('aria-label="Movimiento editado"'));
+  assert.ok(!email.html.includes(edited.id));
+  assert.ok(!email.text.includes(edited.id));
+  assert.ok(!email.html.includes('m-new'));
+  assert.ok(!email.text.includes('m-new'));
 
   const nextWeekEmail = buildWeeklyMovementEmail(
     [
@@ -182,9 +190,12 @@ test('highlights edited movements but leaves new movements unmarked and identifi
     [generator],
     new Date('2026-10-16T10:00:00Z'),
   );
-  const nextWeekCell = getCalendarCell(nextWeekEmail.html, 'g-1:2026-10-16');
-  assert.match(getMovementCard(nextWeekCell, 'm-1'), /MOVIMIENTO EDITADO/);
-  assert.doesNotMatch(getMovementCard(nextWeekCell, 'm-created-next-week'), /MOVIMIENTO EDITADO/);
+  assert.equal((nextWeekEmail.html.match(/MOVIMIENTO EDITADO/g) ?? []).length, 2);
+  assert.equal((nextWeekEmail.text.match(/\[MOVIMIENTO EDITADO\]/g) ?? []).length, 2);
+  assert.doesNotMatch(nextWeekEmail.html, /m-1/);
+  assert.doesNotMatch(nextWeekEmail.text, /m-1/);
+  assert.doesNotMatch(nextWeekEmail.html, /m-created-next-week/);
+  assert.doesNotMatch(nextWeekEmail.text, /m-created-next-week/);
 });
 
 test('escapes dynamic HTML values and preserves readable plain text and long comments', () => {
@@ -198,7 +209,8 @@ test('escapes dynamic HTML values and preserves readable plain text and long com
   assert.ok(email.text.includes(longComment));
   assert.ok(email.text.includes('<Almacén> → Obra norte'));
   assert.ok(email.html.includes('G&lt;&amp;&quot;101'));
-  assert.ok(email.html.includes('Movimiento m-&lt;1&gt;'));
+  assert.ok(!email.text.includes('m-<1>'));
+  assert.ok(!email.html.includes('m-&lt;1&gt;'));
   assert.ok(email.html.includes('&lt;Almacén&gt; → Obra norte'));
   assert.ok(email.html.includes('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;&amp;'));
   assert.ok(email.html.includes('Avisar a &lt;operaciones&gt;'));

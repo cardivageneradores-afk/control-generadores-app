@@ -69,12 +69,8 @@ function formatTime(value?: string) {
   return value ? value.slice(0, 5) : 'Sin indicar';
 }
 
-function formatMovementText(movement: Movement, generator?: Generator) {
-  const title = [generator?.codigo ?? movement.generador_id, generator?.modelo]
-    .filter(Boolean)
-    .join(' · ');
+function formatMovementText(movement: Movement) {
   return [
-    `Movimiento ${movement.id} · ${title}`,
     ...(movement.editado_en ? ['[MOVIMIENTO EDITADO]'] : []),
     `${movement.origen} → ${movement.destino}`,
     `Recogida: ${formatTime(movement.hora_recogida)} · Entrega: ${formatTime(movement.hora_entrega)}`,
@@ -102,7 +98,6 @@ function formatMovementHtml(movement: Movement) {
       <tbody>
         <tr>
           <td style="padding: 7px; border-left: ${isEdited ? '5px solid #c2410c' : `3px solid ${color}`}; font-family: Arial, sans-serif; color: #111827; font-size: 11px; line-height: 1.4; word-break: break-word;">
-            <strong>${escapeHtml(`Movimiento ${movement.id}`)}</strong><br>
             ${isEdited ? '<strong style="color: #9a3412; background-color: #ffedd5;">MOVIMIENTO EDITADO</strong><br>' : ''}
             <span style="color: ${color};">${escapeHtml(movement.tipo_transporte)}</span><br>
             <strong style="color: ${color};">${escapeHtml(`${movement.origen} → ${movement.destino}`)}</strong><br>
@@ -168,6 +163,7 @@ export function buildWeeklyMovementEmail(
     highlightedMovementIds: weekMovements
       .filter((movement) => movement.editado_en)
       .map((movement) => movement.id),
+    showMovementTitle: false,
   });
 
   const calendarText = generatorRows.map((generator) => {
@@ -175,7 +171,7 @@ export function buildWeeklyMovementEmail(
     const cells = weekDays.map((day) => {
       const cellMovements = movementsByGeneratorAndDate.get(generator.id)?.get(day.date) ?? [];
       const content = cellMovements.length
-        ? cellMovements.map((movement) => formatMovementText(movement, generator)).join('\n\n')
+        ? cellMovements.map((movement) => formatMovementText(movement)).join('\n\n')
         : `Ubicación: ${generator.ubicacion?.trim() || '—'}`;
       return `  ${day.label}:\n${content}`;
     });

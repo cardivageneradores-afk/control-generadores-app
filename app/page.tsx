@@ -489,21 +489,25 @@ export default function Page() {
       {state.me ? (
         <div className="app-shell">
           <header className="topbar">
-            <div>
+            <div className="topbar-heading">
+              <div className="user-banner">
+                <span>{state.me?.nombre ?? 'Invitado'}</span>
+                <span className="role">{state.me?.rol === 'editor' ? 'Editor' : 'Solo lectura'}</span>
+              </div>
               <h1>Control de generadores</h1>
               <small>Movimientos y ubicación en tiempo real · Barcelona</small>
             </div>
             <div className="topbar-actions">
-              <button className="button ghost" onClick={() => setShowUsers(true)}>
-                <Users size={15} /> Usuarios
+              <button className="button ghost compact-action" onClick={() => setShowUsers(true)}>
+                <Users size={13} /> Usuarios
               </button>
-              <button className="button ghost" onClick={() => setShowRecipients(true)}>
-                <Mail size={15} /> Destinatarios
+              <button className="button ghost compact-action" onClick={() => setShowRecipients(true)}>
+                <Mail size={13} /> Destinatarios
               </button>
               {!isReadOnly ? (
                 <>
-                  <button className="button ghost" onClick={() => setShowGeneratorModal(true)}>
-                    <Plus size={15} /> Generador
+                  <button className="button ghost compact-action" onClick={() => setShowGeneratorModal(true)}>
+                    <Plus size={13} /> Generador
                   </button>
                   <button className="button primary" onClick={() => openMoveModal()}>
                     <Plus size={15} /> Registrar movimiento
@@ -515,11 +519,6 @@ export default function Page() {
               </button>
             </div>
           </header>
-
-          <div className="user-banner">
-            <span>{state.me?.nombre ?? 'Invitado'}</span>
-            <span className="role">{state.me?.rol === 'editor' ? 'Editor' : 'Solo lectura'}</span>
-          </div>
 
           <section>
             <p className="section-label">Próximos movimientos</p>
