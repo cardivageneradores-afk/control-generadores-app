@@ -5,16 +5,17 @@ import {
 } from './email-delivery.ts';
 
 export const GMAIL_DAILY_RECIPIENT_LIMIT = 450;
+export const GMAIL_MAX_RECIPIENTS_PER_MESSAGE = 100;
 
 export type GmailMail = {
   from: string;
-  to: string;
+  to: string[];
   subject: string;
   html: string;
   text: string;
 };
 
-export type GmailSendMail = (mail: GmailMail) => Promise<{ messageId?: string } | void>;
+export type GmailSendMail = (mail: GmailMail) => Promise<{ rejected?: string[] } | void>;
 
 export type RecipientFailure = { email: string; reason: string };
 
@@ -67,19 +68,25 @@ export async function deliverSummaryViaGmail({
 
   const sent: string[] = [];
   const failed: RecipientFailure[] = [];
-  // One message per recipient so nobody sees the other addresses.
-  for (const recipient of recipients) {
+  // One message with everyone visible in "to"; only split above Gmail's per-message cap.
+  for (let index = 0; index < recipients.length; index += GMAIL_MAX_RECIPIENTS_PER_MESSAGE) {
+    const group = recipients.slice(index, index + GMAIL_MAX_RECIPIENTS_PER_MESSAGE);
     try {
-      await sendMail({
+      const info = await sendMail({
         from: `Control Generadores <${user}>`,
-        to: recipient,
+        to: group,
         subject: message.subject,
         html: message.html,
         text: message.text,
       });
-      sent.push(recipient);
+      const rejected = new Set((info?.rejected ?? []).map((address) => address.toLowerCase()));
+      for (const email of group) {
+        if (rejected.has(email.toLowerCase())) failed.push({ email, reason: describeGmailFailure({ code: 'EENVELOPE' }) });
+        else sent.push(email);
+      }
     } catch (error) {
-      failed.push({ email: recipient, reason: describeGmailFailure(error) });
+      const reason = describeGmailFailure(error);
+      failed.push(...group.map((email) => ({ email, reason })));
     }
   }
 

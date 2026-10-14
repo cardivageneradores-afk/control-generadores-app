@@ -26,7 +26,7 @@ function sendViaGmail(user: string, pass: string, message: SummaryEmailMessage) 
     sendMail: async (mail) => {
       const needsLogo = mail.html.includes('src="cid:cardiva-logo"');
       const logo = needsLogo ? await readFile(join(process.cwd(), 'public', 'cardiva-logo.png')) : null;
-      await transporter.sendMail({
+      const info = await transporter.sendMail({
         ...mail,
         ...(logo ? {
           attachments: [{
@@ -38,6 +38,9 @@ function sendViaGmail(user: string, pass: string, message: SummaryEmailMessage) 
           }],
         } : {}),
       });
+      return {
+        rejected: (info.rejected ?? []).map((entry) => String(typeof entry === 'string' ? entry : (entry as { address: string }).address)),
+      };
     },
   }).finally(() => transporter.close());
 }
