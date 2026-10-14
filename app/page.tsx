@@ -448,10 +448,10 @@ export default function Page() {
   const sendSummary = async () => {
     setEmailError(null);
     try {
-      const result = await api<{ mode?: string }>('/api/enviar-resumen', { method: 'POST' });
+      const result = await api<{ mode?: string; partial?: boolean; message?: string }>('/api/enviar-resumen', { method: 'POST' });
       setToast(result.mode === 'demo'
         ? 'Envío simulado en desarrollo; no se envió ningún email.'
-        : 'Resumen enviado por email.');
+        : result.partial && result.message ? result.message : 'Resumen enviado por email.');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo enviar el resumen.';
       setEmailError(message);

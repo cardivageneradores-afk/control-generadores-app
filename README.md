@@ -59,7 +59,25 @@ Si `GET /api/setup` devuelve `503`, el campo `diagnostic` permite identificar el
 
 La app usa cuatro tablas (`usuarios`, `generadores`, `movimientos`, `destinatarios`) y RLS activado. Las rutas API acceden mediante la variable secreta seleccionada (`SUPABASE_SECRET_KEY` preferida, o `SUPABASE_SERVICE_ROLE_KEY` heredada); no se crean políticas anónimas permisivas.
 
-## Resend
+## Gmail (envío a destinatarios reales, sin dominio propio)
+
+Si `GMAIL_USER` y `GMAIL_APP_PASSWORD` están definidas, el correo se envía por Gmail SMTP (nodemailer) y se ignora Resend. Se envía un mensaje por destinatario (nadie ve las direcciones de los demás), con tiempos de espera de 10-20 s; si algunos fallan se informa por destinatario y el resto se entrega. Gmail permite unos 500 envíos/día; la app rechaza listas de más de 450.
+
+Pasos (usuario no técnico):
+1. En la cuenta `cardiva.generadores@gmail.com` activa la verificación en dos pasos (myaccount.google.com → Seguridad).
+2. En myaccount.google.com/apppasswords crea una «contraseña de aplicación» (16 letras) llamada «Control Generadores».
+3. En Vercel → Settings → Environment Variables (Production) añade `GMAIL_USER=cardiva.generadores@gmail.com` y `GMAIL_APP_PASSWORD=<las 16 letras>`; redespliega.
+4. Pulsa «Enviar resumen» en la app para probar. Si falla con «credenciales», revisa que la contraseña sea de aplicación, no la normal.
+
+## Envío semanal automático
+
+`vercel.json` programa `GET /api/cron/resumen-semanal` los lunes a las 06:00 UTC (07:00 en invierno / 08:00 en verano, hora de Madrid). Resume la semana que empieza ese lunes (lunes-domingo) a la lista de destinatarios actual; si no hay destinatarios no envía. Vercel Hobby puede retrasar el cron hasta una hora.
+
+1. Genera un secreto largo (`openssl rand -base64 32`) y defínelo en Vercel como `CRON_SECRET` (Production); Vercel lo envía como `Authorization: Bearer`. Sin `CRON_SECRET` el endpoint responde siempre 401.
+2. Aplica `supabase/migrations/20261015090000_weekly_email_runs.sql` pegándolo en el **SQL Editor** de Supabase (es idempotente). Registra una marca por semana para no enviar dos veces ante reintentos; si el envío falla del todo, la marca se libera para poder reintentar.
+3. Redespliega. Para forzar una prueba: Vercel → Settings → Cron Jobs → Run. Si ya se envió esa semana devolverá `skipped: ya-enviado`.
+
+## Resend (alternativa, solo si no hay Gmail configurado)
 
 1. Crea una API key en [Resend](https://resend.com/).
 2. Verifica el dominio remitente en **Domains**.
