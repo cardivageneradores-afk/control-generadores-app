@@ -61,7 +61,7 @@ La app usa cuatro tablas (`usuarios`, `generadores`, `movimientos`, `destinatari
 
 ## Gmail (envío a destinatarios reales, sin dominio propio)
 
-Si `GMAIL_USER` y `GMAIL_APP_PASSWORD` están definidas, el correo se envía por Gmail SMTP (nodemailer) y se ignora Resend. Se envía un mensaje por destinatario (nadie ve las direcciones de los demás), con tiempos de espera de 10-20 s; si algunos fallan se informa por destinatario y el resto se entrega. Gmail permite unos 500 envíos/día; la app rechaza listas de más de 450.
+Si `GMAIL_USER` y `GMAIL_APP_PASSWORD` están definidas, el correo se envía por Gmail SMTP (nodemailer) y se ignora Resend. Se envía UN solo mensaje con todos los destinatarios en «Para» (se ven entre sí), con tiempos de espera de 10-20 s. Gmail admite hasta 100 destinatarios por mensaje; con más, se trocea en varios mensajes de máx. 100. Si Gmail rechaza una dirección o un mensaje completo, se informa de qué direcciones fallaron y el resto se entrega; si falla todo, se devuelve un error claro. Gmail permite unos 500 envíos/día; la app rechaza listas de más de 450. La ruta Resend ya enviaba un único mensaje con todos en «Para».
 
 Pasos (usuario no técnico):
 1. En la cuenta `cardiva.generadores@gmail.com` activa la verificación en dos pasos (myaccount.google.com → Seguridad).

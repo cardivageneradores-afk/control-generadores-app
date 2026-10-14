@@ -6,32 +6,56 @@ import { getMadridWeekStart, isAuthorizedCronRequest } from './weekly-cron.ts';
 
 const message = { to: ['a@x.com', 'b@x.com'], subject: 'S', html: '<p>h</p>', text: 't' };
 
-test('gmail sends one message per recipient without exposing other addresses', async () => {
+test('gmail sends a single message with every recipient visible together', async () => {
   const mails = [];
   const result = await deliverSummaryViaGmail({
     user: 'cardiva@gmail.com',
     message,
     sendMail: async (mail) => { mails.push(mail); },
   });
-  assert.deepEqual(mails.map((m) => m.to), ['a@x.com', 'b@x.com']);
+  assert.equal(mails.length, 1);
+  assert.deepEqual(mails[0].to, ['a@x.com', 'b@x.com']);
   assert.equal(mails[0].from, 'Control Generadores <cardiva@gmail.com>');
   assert.equal(result.partial, false);
   assert.deepEqual(result.sent, ['a@x.com', 'b@x.com']);
 });
 
-test('gmail reports partial failures per recipient without leaking error details', async () => {
+test('gmail splits into messages of at most 100 recipients', async () => {
+  const to = Array.from({ length: 250 }, (_, i) => `u${i}@x.com`);
+  const sizes = [];
   const result = await deliverSummaryViaGmail({
     user: 'u@gmail.com',
-    message,
-    sendMail: async (mail) => {
-      if (mail.to === 'b@x.com') throw Object.assign(new Error('secret-pass leaked'), { responseCode: 550 });
-    },
+    message: { ...message, to },
+    sendMail: async (mail) => { sizes.push(mail.to.length); },
   });
-  assert.equal(result.partial, true);
-  assert.deepEqual(result.failed, [{ email: 'b@x.com', reason: 'Gmail rechazó la dirección destinataria.' }]);
-  assert.ok(!JSON.stringify(result).includes('secret-pass'));
+  assert.deepEqual(sizes, [100, 100, 50]);
+  assert.equal(result.sent.length, 250);
 });
 
+test('gmail reports rejected addresses and failed chunks without leaking error details', async () => {
+  const rejectedResult = await deliverSummaryViaGmail({
+    user: 'u@gmail.com',
+    message,
+    sendMail: async () => ({ rejected: ['B@x.com'] }),
+  });
+  assert.equal(rejectedResult.partial, true);
+  assert.deepEqual(rejectedResult.sent, ['a@x.com']);
+  assert.deepEqual(rejectedResult.failed.map((f) => f.email), ['b@x.com']);
+
+  let call = 0;
+  const to = Array.from({ length: 101 }, (_, i) => `u${i}@x.com`);
+  const chunkResult = await deliverSummaryViaGmail({
+    user: 'u@gmail.com',
+    message: { ...message, to },
+    sendMail: async () => {
+      if (call++ === 1) throw Object.assign(new Error('secret-pass leaked'), { responseCode: 421 });
+    },
+  });
+  assert.equal(chunkResult.partial, true);
+  assert.equal(chunkResult.sent.length, 100);
+  assert.deepEqual(chunkResult.failed.map((f) => f.email), ['u100@x.com']);
+  assert.ok(!JSON.stringify(chunkResult).includes('secret-pass'));
+});
 test('gmail throws when every recipient fails and hides raw errors', async () => {
   await assert.rejects(
     deliverSummaryViaGmail({
