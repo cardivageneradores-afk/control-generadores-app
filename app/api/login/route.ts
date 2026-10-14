@@ -8,9 +8,15 @@ import {
 import { getStore, StoreError } from '@/app/lib/store';
 import { verifyPassword } from '@/app/lib/password';
 import {
+  clearLoginRateLimit,
+  getClientIp,
+  isLoginRateLimited,
+} from '@/app/lib/login-rate-limit';
+import {
   classifySupabaseFailure,
   getPersistenceConfigurationError,
   getSupabaseFailureMetadata,
+  supabaseAdmin,
 } from '@/app/lib/supabase';
 
 function persistenceFailureResponse(error: unknown) {
@@ -53,9 +59,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: persistenceError }, { status: 503 });
   }
 
-  const body = await request.json().catch(() => ({}));
-  const email = String(body.email ?? '').trim().toLowerCase();
+  const parsedBody = await request.json().catch(() => null);
+  const body =
+    parsedBody && typeof parsedBody === 'object'
+      ? (parsedBody as Record<string, unknown>)
+      : {};
+  const rawEmail = String(body.email ?? '').trim().toLowerCase();
   const password = String(body.password ?? '');
+  const inputValid = rawEmail.length <= 254 && password.length <= 256;
+  const email = inputValid ? rawEmail : '';
+
+  if (!demoFallbackEnabled) {
+    try {
+      if (await isLoginRateLimited(
+        (name, parameters) => supabaseAdmin!.rpc(name, parameters),
+        email,
+        getClientIp(request),
+        process.env.SESSION_SECRET!,
+      )) {
+        return NextResponse.json(
+          { error: 'Email o contraseña incorrectos. Espera unos minutos antes de volver a intentarlo.' },
+          { status: 429 },
+        );
+      }
+    } catch (error) {
+      console.error('[login] Rate limit persistence failure', getSupabaseFailureMetadata(error));
+      return NextResponse.json(
+        { error: 'No se pudo iniciar sesión. Inténtalo de nuevo más tarde.' },
+        { status: 503 },
+      );
+    }
+  }
 
   let state: Awaited<ReturnType<typeof getStore>>;
   try {
@@ -69,7 +103,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    if (!(await verifyPassword(password, user.passwordHash))) {
+    if (!inputValid || !(await verifyPassword(password, user.passwordHash))) {
       return NextResponse.json({ error: 'Email o contraseña incorrectos.' }, { status: 401 });
     }
   } catch (error) {
@@ -78,6 +112,23 @@ export async function POST(request: Request) {
       { error: 'No se pudo validar la cuenta. Revisa la configuración de usuarios.' },
       { status: 503 },
     );
+  }
+
+  if (!demoFallbackEnabled) {
+    try {
+      await clearLoginRateLimit(
+        (name, parameters) => supabaseAdmin!.rpc(name, parameters),
+        email,
+        getClientIp(request),
+        process.env.SESSION_SECRET!,
+      );
+    } catch (error) {
+      console.error('[login] Rate limit reset failure', getSupabaseFailureMetadata(error));
+      return NextResponse.json(
+        { error: 'No se pudo iniciar sesión. Inténtalo de nuevo más tarde.' },
+        { status: 503 },
+      );
+    }
   }
 
   const { passwordHash: _passwordHash, ...safeUser } = user;

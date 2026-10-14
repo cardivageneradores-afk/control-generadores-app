@@ -37,6 +37,7 @@ export interface Movement {
 }
 
 export interface AppState {
+  revision: number;
   usuarios: User[];
   generadores: Generator[];
   movimientos: Movement[];

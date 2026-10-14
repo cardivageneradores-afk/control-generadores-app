@@ -18,7 +18,7 @@ Sin credenciales, el fallback solo funciona si `NODE_ENV` no es `production` y s
 
 1. Crea un proyecto en [Supabase](https://supabase.com/).
 2. En **Project Settings > API Keys** o en el diálogo **Connect**, configura la URL en `SUPABASE_URL` y la clave secreta nueva (`sb_secret_...`) en `SUPABASE_SECRET_KEY`. Son variables de servidor; la app también acepta `NEXT_PUBLIC_SUPABASE_URL` como alias heredado y `SUPABASE_SERVICE_ROLE_KEY` con una clave `service_role` JWT heredada. Se prefieren los nombres nuevos si ambos están definidos, así que no hace falta duplicar variables.
-3. Ejecuta estas migraciones en orden en **SQL Editor**: `20260924214000_initial_schema.sql`, `20260925100000_admin_bootstrap.sql`, `20261008110000_transactional_store.sql`, `20261009120000_fix_transactional_store_delete_guard.sql`, `20261009130000_movement_times.sql` y `20261013120000_movement_edit_tracking.sql`. La segunda crea la función RPC usada por `/setup`; la tercera hace transaccionales las escrituras de la aplicación; la cuarta conserva la guarda `WHERE true` requerida por Supabase; la quinta añade horas opcionales de recogida/entrega; la última añade la fecha de edición opcional y actualiza el RPC. Aplica todas las migraciones **antes de desplegar** el código correspondiente; si el código se despliega primero, las lecturas fallarán explícitamente y las escrituras quedarán bloqueadas hasta actualizar el esquema. Los movimientos creados quedan sin marca de edición; las ediciones y cambios de estado posteriores se resaltan en los emails. Si usas la CLI:
+3. Las migraciones iniciales y todas las posteriores están versionadas en `supabase/migrations`; en un proyecto nuevo, aplica la carpeta completa **en orden antes de desplegar**. Incluye `20260924214000_initial_schema.sql`, `20260925100000_admin_bootstrap.sql`, `20261008110000_transactional_store.sql`, `20261009120000_fix_transactional_store_delete_guard.sql`, `20261009130000_movement_times.sql`, `20261013120000_movement_edit_tracking.sql`, `20261014120000_state_concurrency_and_login_rate_limits.sql` y `20261014130000_service_role_table_grants.sql` (8 en total). La penúltima mantiene un número de revisión transaccional para rechazar escrituras basadas en datos obsoletos y añade límites de login compartidos entre instancias. La última concede explícitamente `select, insert, update, delete` a `service_role` sobre las cuatro tablas de negocio; es necesaria en proyectos con exposición automática de tablas desactivada (sin ella la API falla con SQLSTATE `42501`) y es idempotente donde esos permisos ya existen. No toca `anon`/`authenticated` ni `app_state_revision`/`login_rate_limits`. **Antes de producción, prueba esta migración y el nuevo despliegue en staging y completa un simulacro de restauración verificado.** La migración desactiva explícitamente el RPC antiguo de 4 parámetros para evitar sobrescrituras: **en cuanto se aplique, las versiones desplegadas que aún usen ese RPC rechazarán escrituras**. Por tanto, aplica migración y despliegue compatible en una ventana controlada; no dejes la migración aplicada con la versión antigua en servicio. Si usas la CLI:
 
    ```bash
    npx supabase link --project-ref <project-ref>
@@ -29,6 +29,31 @@ Sin credenciales, el fallback solo funciona si `NODE_ENV` no es `production` y s
 5. Despliega de nuevo y abre `https://<tu-dominio>/setup`. Introduce el token, nombre, email y una contraseña de al menos 12 caracteres. La contraseña se hashea en el servidor; nunca se guarda ni se envía como hash desde el navegador.
 6. Comprueba que puedes iniciar sesión y elimina `ADMIN_SETUP_TOKEN` de Vercel. Haz un nuevo deploy. La ruta rechaza cualquier alta después de existir un usuario y queda deshabilitada sin el token.
 7. Define un `SESSION_SECRET` aleatorio de al menos 32 caracteres. La sesión es una cookie httpOnly firmada y cada request vuelve a validar el usuario y su rol en Supabase.
+
+## Copias de seguridad y restauración
+
+Antes de cualquier cambio de esquema o despliegue importante, confirma en **Supabase Dashboard > Database > Backups** qué copias automáticas y retención están disponibles para el plan del proyecto. La disponibilidad de PITR, su ventana de retención y los tiempos de recuperación dependen del plan; compruébalos en el dashboard y no des por hecho que están habilitados.
+
+Para una copia lógica adicional, instala Supabase CLI, Docker Desktop y PostgreSQL (incluye `psql`), crea una carpeta de backup **fuera del repositorio** con acceso restringido y define `SUPABASE_DB_URL` desde un gestor de secretos o una sesión segura. No guardes la URL con contraseña en el repositorio, historial de comandos o tickets. Ejecuta en PowerShell desde esa carpeta:
+
+```powershell
+supabase db dump --db-url "$env:SUPABASE_DB_URL" -f roles.sql --role-only
+supabase db dump --db-url "$env:SUPABASE_DB_URL" -f schema.sql
+supabase db dump --db-url "$env:SUPABASE_DB_URL" -f data.sql --use-copy --data-only -x "storage.buckets_vectors" -x "storage.vector_indexes"
+supabase db dump --db-url "$env:SUPABASE_DB_URL" -f history_schema.sql --schema supabase_migrations
+supabase db dump --db-url "$env:SUPABASE_DB_URL" -f history_data.sql --use-copy --data-only --schema supabase_migrations
+```
+
+Protege y cifra los cinco archivos, conserva la fecha y el proyecto de origen en un registro separado sin credenciales, y confirma que los archivos existen y tienen tamaño no nulo. Una copia lógica de base de datos no sustituye el respaldo de objetos de Storage ni copia secretos de Vercel/Resend.
+
+Haz un simulacro de restauración solo en un **proyecto Supabase de staging nuevo y separado**, nunca en producción ni sobre una base con datos que quieras conservar. Configura las extensiones necesarias y define `STAGING_DATABASE_URL` de forma segura. Desde la carpeta protegida del backup, restaura en una única transacción:
+
+```powershell
+psql --single-transaction --variable ON_ERROR_STOP=1 --file roles.sql --file schema.sql --command "SET session_replication_role = replica" --file data.sql --dbname "$env:STAGING_DATABASE_URL"
+psql --single-transaction --variable ON_ERROR_STOP=1 --file history_schema.sql --file history_data.sql --dbname "$env:STAGING_DATABASE_URL"
+```
+
+Después verifica en staging el historial y las tablas de migración, recuentos de usuarios/generadores/movimientos/destinatarios, relaciones entre generadores y movimientos, acceso de la aplicación con variables de staging y una prueba de login. Si restauras solo esquema y datos, preserva también el historial de migraciones como indica la [guía de backup/restore de Supabase](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore). No ejecutes `db push` hasta comprobar que el historial corresponde al esquema restaurado. Registra el resultado y el tiempo del simulacro; una copia que no se haya restaurado y verificado no se considera una recuperación probada.
 
 Si `GET /api/setup` devuelve `503`, el campo `diagnostic` permite identificar el problema sin revelar secretos: `SETUP_CONFIG_MISSING` indica variables ausentes, `SETUP_CONFIG_INVALID` una URL o clave con formato no válido, `SETUP_SUPABASE_CREDENTIALS_INVALID` credenciales rechazadas por Supabase y `SETUP_SUPABASE_SCHEMA_MISSING` una tabla o migración ausente. Las claves aceptadas son `sb_secret_` seguido de caracteres alfanuméricos, `_` o `-`, o la service role JWT heredada con tres segmentos. Los errores inesperados usan `SETUP_SUPABASE_UNKNOWN`; el servidor registra únicamente ese código seguro.
 
@@ -56,4 +81,4 @@ npm test
 npm run build
 ```
 
-La app devuelve `503` si falta la configuración de sesión o persistencia en un entorno no-demo, en vez de ocultar el problema con datos en memoria. Las escrituras se aplican dentro de una transacción de PostgreSQL para que un error no borre antes los datos existentes.
+La app devuelve `503` si falta la configuración de sesión o persistencia en un entorno no-demo, en vez de ocultar el problema con datos en memoria. Las escrituras se aplican dentro de una transacción de PostgreSQL; cada snapshot lleva una revisión y una escritura concurrente obsoleta recibe `409` para que se actualice y vuelva a intentar, nunca se sobrescribe silenciosamente.
