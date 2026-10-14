@@ -35,7 +35,7 @@ export const POST = withStoreErrorHandling(async (request: Request) => {
       return NextResponse.json({ error: error.message }, { status: 503 });
     }
     if (error instanceof EmailDeliveryError) {
-      console.error('[enviar-resumen] Resend delivery failed', error.message, error.cause);
+      console.error('[enviar-resumen] Email delivery failed', error.message);
       return NextResponse.json({ error: error.message }, { status: 502 });
     }
 
