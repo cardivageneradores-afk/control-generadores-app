@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildWeeklyMovementEmail } from './weekly-movement-email.ts';
+import { buildWeeklyMovementEmail, buildWeeklyMovementSubject } from './weekly-movement-email.ts';
 
 const generator = {
   id: 'g-1',
@@ -252,6 +252,7 @@ test('formats the subject date range compactly across month and year boundaries'
   assert.equal(sameMonth.subjectDateRange, '12-18 oct 2026');
   assert.equal(crossMonth.subjectDateRange, '29 sep - 5 oct 2025');
   assert.equal(crossYear.subjectDateRange, '29 dic 2025 - 4 ene 2026');
+  assert.equal(buildWeeklyMovementSubject(sameMonth.subjectDateRange), 'Movimiento Generadores · 12-18 oct 2026');
 });
 
 test('uses compact inline table styles for a readable movement card', () => {
@@ -271,7 +272,8 @@ test('uses compact inline table styles for a readable movement card', () => {
   assert.match(card, /white-space: nowrap;">EDITADO/);
   assert.match(card, /Recogida: 08:30 · Entrega: 10:15 · Estado: pendiente/);
   assert.match(card, /Comentarios: <span[^>]*>A nombre completo con comentario largo para comprobar el ajuste entre palabras\.<\/span>/);
-  assert.match(getCalendarCell(email.html, 'g-1:2026-10-05'), /font-size: 10px; color: #4b5563/);
+  assert.match(getCalendarCell(email.html, 'g-1:2026-10-05'), /font-size: 12px; color: #4b5563/);
+  assert.match(email.html, /max-width: 1320px/);
 });
 
 test('orders separated detail cards by date and time with matching fixed-width detail columns', () => {
