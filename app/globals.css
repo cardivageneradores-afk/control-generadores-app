@@ -665,7 +665,7 @@ h1, h2, h3, h4 {
 .transport-tag.local { background: var(--amber-dark); color: var(--amber); }
 .transport-tag.nacex { background: rgba(167, 139, 224, 0.2); color: var(--purple); }
 
-@media (max-width: 740px) {
+@media (max-width: 740px), (max-height: 500px) and (pointer: coarse) {
   body {
     padding: 20px 14px 60px;
   }
@@ -1242,7 +1242,7 @@ textarea:focus-visible {
   text-align: center;
 }
 
-@media (max-width: 740px) {
+@media (max-width: 740px), (max-height: 500px) and (pointer: coarse) {
   body {
     padding: 20px 14px 64px;
   }
@@ -1431,7 +1431,7 @@ textarea:focus-visible {
   scroll-snap-align: start;
 }
 
-@media (max-width: 740px) {
+@media (max-width: 740px), (max-height: 500px) and (pointer: coarse) {
   .calendar-scroll {
     scroll-padding-left: 89px;
     margin-inline: 0;

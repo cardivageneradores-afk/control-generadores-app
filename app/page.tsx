@@ -172,7 +172,7 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(min-width: 741px)');
+    const mediaQuery = window.matchMedia('(min-width: 741px) and (min-height: 501px), (min-width: 741px) and (pointer: fine)');
     const updateViewport = () => {
       setIsDesktop(mediaQuery.matches);
       if (!mediaQuery.matches) setIsGeneratorsOpen(false);
