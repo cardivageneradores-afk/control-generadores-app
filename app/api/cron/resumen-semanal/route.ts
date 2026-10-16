@@ -4,7 +4,7 @@ import { sendSummaryEmail } from '@/app/lib/email';
 import { EmailConfigurationError, EmailDeliveryError } from '@/app/lib/email-delivery';
 import { getStore } from '@/app/lib/store';
 import { supabaseAdmin } from '@/app/lib/supabase';
-import { buildWeeklyMovementEmail } from '@/app/lib/weekly-movement-email';
+import { buildWeeklyMovementEmail, buildWeeklyMovementSubject } from '@/app/lib/weekly-movement-email';
 import { getMadridWeekStart, isAuthorizedCronRequest } from '@/app/lib/weekly-cron';
 
 export const dynamic = 'force-dynamic';
@@ -43,7 +43,7 @@ export const GET = withStoreErrorHandling(async (request: Request) => {
   try {
     const response = await sendSummaryEmail({
       to: state.destinatarios,
-      subject: `Resumen semanal de control de generadores · ${subjectDateRange}`,
+      subject: buildWeeklyMovementSubject(subjectDateRange),
       ...summary,
     });
     const failed = 'failed' in response && Array.isArray(response.failed) ? response.failed.length : 0;

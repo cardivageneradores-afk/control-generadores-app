@@ -4,7 +4,8 @@ import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore } from '@/app/lib/store';
 import { EmailConfigurationError, EmailDeliveryError } from '@/app/lib/email-delivery';
 import { sendSummaryEmail } from '@/app/lib/email';
-import { buildWeeklyMovementEmail } from '@/app/lib/weekly-movement-email';
+import { buildWeeklyMovementEmail, buildWeeklyMovementSubject } from '@/app/lib/weekly-movement-email';
+import { getWeekStartDate, isValidWeekStart } from '@/app/lib/calendar-week';
 
 export const POST = withStoreErrorHandling(async (request: Request) => {
   const editor = await getEditorFromRequest(request);
@@ -17,8 +18,18 @@ export const POST = withStoreErrorHandling(async (request: Request) => {
     return NextResponse.json({ error: 'Configura al menos un destinatario antes de enviar el resumen.' }, { status: 400 });
   }
   const recipients = state.destinatarios;
+  let weekStart: Date;
+  try {
+    const body = await request.json();
+    if (!body || typeof body !== 'object' || !isValidWeekStart(body.weekStart)) {
+      return NextResponse.json({ error: 'La semana debe comenzar en un lunes válido.' }, { status: 400 });
+    }
+    weekStart = getWeekStartDate(body.weekStart);
+  } catch {
+    return NextResponse.json({ error: 'Indica el lunes de inicio de la semana que quieres enviar.' }, { status: 400 });
+  }
 
-  const { subjectDateRange, ...summary } = buildWeeklyMovementEmail(state.movimientos, state.generadores, new Date(), {
+  const { subjectDateRange, ...summary } = buildWeeklyMovementEmail(state.movimientos, state.generadores, weekStart, {
     sender: editor,
     logoCid: 'cardiva-logo',
   });
@@ -26,7 +37,7 @@ export const POST = withStoreErrorHandling(async (request: Request) => {
   try {
     const response = await sendSummaryEmail({
       to: recipients,
-      subject: `Resumen semanal de control de generadores · ${subjectDateRange}`,
+      subject: buildWeeklyMovementSubject(subjectDateRange),
       ...summary,
     });
     return NextResponse.json(response);
