@@ -667,6 +667,7 @@ export default function Page() {
               <span><i className="legend-dot local"></i>Local</span>
               <span><i className="legend-dot nacex"></i>Nacex</span>
             </div>
+            <div className="calendar-scroll" tabIndex={0} role="region" aria-label="Calendario semanal">
             <div className="calendar-grid">
               <div className="calendar-cell header empty"></div>
               {weekDates.map((date) => (
@@ -726,6 +727,7 @@ export default function Page() {
                   })}
                 </Fragment>
               ))}
+            </div>
             </div>
           </section>
 

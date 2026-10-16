@@ -1405,3 +1405,54 @@ textarea:focus-visible {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Calendario semanal: el scroll horizontal queda contenido en su propio contenedor */
+.calendar-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  max-width: 100%;
+}
+
+.calendar-scroll:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.calendar-scroll .calendar-grid {
+  overflow: visible;
+}
+
+.calendar-scroll .calendar-cell.header:not(.empty) {
+  scroll-snap-align: start;
+}
+
+@media (max-width: 740px) {
+  .calendar-scroll {
+    scroll-padding-left: 84px;
+    margin-inline: -2px;
+    padding-bottom: 6px;
+  }
+
+  .calendar-scroll .calendar-grid {
+    grid-template-columns: 84px repeat(7, 124px);
+    min-width: 0;
+    width: max-content;
+  }
+
+  .calendar-scroll .calendar-cell.row-label,
+  .calendar-scroll .calendar-cell.header.empty {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--bg);
+  }
+
+  .calendar-scroll .calendar-cell.row-label {
+    background: #19222c;
+  }
+}
