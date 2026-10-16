@@ -18,7 +18,7 @@ export const POST = withStoreErrorHandling(async (request: Request) => {
   }
   const recipients = state.destinatarios;
 
-  const summary = buildWeeklyMovementEmail(state.movimientos, state.generadores, new Date(), {
+  const { subjectDateRange, ...summary } = buildWeeklyMovementEmail(state.movimientos, state.generadores, new Date(), {
     sender: editor,
     logoCid: 'cardiva-logo',
   });
@@ -26,7 +26,7 @@ export const POST = withStoreErrorHandling(async (request: Request) => {
   try {
     const response = await sendSummaryEmail({
       to: recipients,
-      subject: 'Resumen semanal de control de generadores',
+      subject: `Resumen semanal de control de generadores · ${subjectDateRange}`,
       ...summary,
     });
     return NextResponse.json(response);

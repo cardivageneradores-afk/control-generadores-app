@@ -35,7 +35,7 @@ export const GET = withStoreErrorHandling(async (request: Request) => {
     }, { status: 503 });
   }
 
-  const summary = buildWeeklyMovementEmail(state.movimientos, state.generadores, now, {
+  const { subjectDateRange, ...summary } = buildWeeklyMovementEmail(state.movimientos, state.generadores, now, {
     sender: { nombre: 'Envío automático semanal', email: process.env.GMAIL_USER?.trim() || 'sistema' },
     logoCid: 'cardiva-logo',
   });
@@ -43,7 +43,7 @@ export const GET = withStoreErrorHandling(async (request: Request) => {
   try {
     const response = await sendSummaryEmail({
       to: state.destinatarios,
-      subject: 'Resumen semanal de control de generadores',
+      subject: `Resumen semanal de control de generadores · ${subjectDateRange}`,
       ...summary,
     });
     const failed = 'failed' in response && Array.isArray(response.failed) ? response.failed.length : 0;

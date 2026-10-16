@@ -70,6 +70,31 @@ function getWeekDays(now: Date): WeekDay[] {
   });
 }
 
+function formatSubjectDateRange(weekDays: WeekDay[]) {
+  const formatDate = (value: string) => {
+    const date = new Date(`${value}T00:00:00Z`);
+    const month = new Intl.DateTimeFormat('es-ES', { month: 'short', timeZone: 'UTC' })
+      .format(date)
+      .replace('.', '');
+    const shortMonth = month === 'sept' ? 'sep' : month;
+    return {
+      day: date.getUTCDate(),
+      month: shortMonth,
+      year: date.getUTCFullYear(),
+    };
+  };
+  const start = formatDate(weekDays[0].date);
+  const end = formatDate(weekDays[6].date);
+
+  if (start.year !== end.year) {
+    return `${start.day} ${start.month} ${start.year} - ${end.day} ${end.month} ${end.year}`;
+  }
+  if (start.month !== end.month) {
+    return `${start.day} ${start.month} - ${end.day} ${end.month} ${end.year}`;
+  }
+  return `${start.day}-${end.day} ${end.month} ${end.year}`;
+}
+
 function formatTime(value?: string) {
   return value ? value.slice(0, 5) : 'Sin indicar';
 }
@@ -99,17 +124,15 @@ function formatMovementHtml(movement: Movement) {
     : 'border: 1px solid #dbe3ee;';
 
   return `
-    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; margin: 0 0 6px; ${highlightStyle} border-collapse: collapse;">
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; margin: 0 0 4px; ${highlightStyle} border-collapse: collapse; table-layout: fixed;">
       <tbody>
         <tr>
-          <td style="padding: 7px; border-left: ${isEdited ? '5px solid #c2410c' : `3px solid ${color}`}; font-family: Arial, sans-serif; color: #111827; font-size: 11px; line-height: 1.4; word-break: break-word;">
-            ${isEdited ? '<strong style="color: #9a3412; background-color: #ffedd5;">MOVIMIENTO EDITADO</strong><br>' : ''}
+          <td style="padding: 4px; border-left: ${isEdited ? '4px solid #c2410c' : `3px solid ${color}`}; font-family: Arial, sans-serif; color: #111827; font-size: 9px; line-height: 1.25; word-break: normal; overflow-wrap: break-word;">
+            ${isEdited ? '<strong aria-label="Movimiento editado" style="color: #9a3412; background-color: #ffedd5; white-space: nowrap;">EDITADO</strong><br>' : ''}
             <span style="color: ${color};">${escapeHtml(movement.tipo_transporte)}</span><br>
             <strong style="color: ${color};">${escapeHtml(`${movement.origen} → ${movement.destino}`)}</strong><br>
-            Recogida: ${escapeHtml(formatTime(movement.hora_recogida))}<br>
-            Entrega: ${escapeHtml(formatTime(movement.hora_entrega))}<br>
-            Estado: ${escapeHtml(movement.estado)}<br>
-            Comentarios: <span style="overflow-wrap: anywhere; word-break: break-word;">${escapeHtml(comment).replace(/\r\n?|\n/g, '<br>')}</span>
+            Recogida: ${escapeHtml(formatTime(movement.hora_recogida))} · Entrega: ${escapeHtml(formatTime(movement.hora_entrega))} · Estado: ${escapeHtml(movement.estado)}<br>
+            Comentarios: <span style="overflow-wrap: break-word; word-break: normal;">${escapeHtml(comment).replace(/\r\n?|\n/g, '<br>')}</span>
           </td>
         </tr>
       </tbody>
@@ -162,6 +185,7 @@ export function buildWeeklyMovementEmail(
   const pendingCount = weekMovements.filter(({ estado }) => estado === 'pendiente').length;
   const completedCount = weekMovements.filter(({ estado }) => estado === 'completado').length;
   const weekRange = `${weekDays[0].label} – ${weekDays[6].label}`;
+  const subjectDateRange = formatSubjectDateRange(weekDays);
   const movementSummary = buildMovementSummary(weekMovements, generators, {
     heading: 'Detalle de movimientos',
     emptyMessage: 'No hay movimientos esta semana.',
@@ -169,6 +193,7 @@ export function buildWeeklyMovementEmail(
       .filter((movement) => movement.editado_en)
       .map((movement) => movement.id),
     showMovementTitle: false,
+    emailCards: true,
   });
 
   const calendarText = generatorRows.map((generator) => {
@@ -188,16 +213,16 @@ export function buildWeeklyMovementEmail(
     '',
     calendarText || 'Sin generadores',
     '',
+    movementSummary.text,
+    '',
     'Resumen semanal',
     `Movimientos: ${weekMovements.length}`,
     `Pendientes: ${pendingCount}`,
     `Completados: ${completedCount}`,
-    '',
-    movementSummary.text,
   ].join('\n');
 
   const headerCells = weekDays.map((day) => `
-    <th scope="col" style="width: 12%; padding: 8px 4px; border: 1px solid #dbe3ee; background-color: #eef2f7; font-family: Arial, sans-serif; color: #111827; font-size: 11px; line-height: 1.3; text-align: center;">
+    <th scope="col" width="12.85%" style="width: 12.85%; padding: 8px 4px; border: 1px solid #dbe3ee; background-color: #eef2f7; font-family: Arial, sans-serif; color: #111827; font-size: 11px; line-height: 1.3; text-align: center;">
       ${escapeHtml(day.shortLabel)}
     </th>
   `).join('');
@@ -208,7 +233,7 @@ export function buildWeeklyMovementEmail(
         ? cellMovements.map((movement) => formatMovementHtml(movement)).join('')
         : `<span style="font-size: 10px; color: #4b5563;">Ubicación: ${escapeHtml(generator.ubicacion?.trim() || '—')}</span>`;
       return `
-        <td data-calendar-cell="${escapeHtml(`${generator.id}:${day.date}`)}" style="width: 12%; padding: 5px; border: 1px solid #dbe3ee; vertical-align: top; font-family: Arial, sans-serif; color: #374151; font-size: 11px; line-height: 1.4; word-break: break-word;">
+        <td data-calendar-cell="${escapeHtml(`${generator.id}:${day.date}`)}" width="12.85%" style="width: 12.85%; padding: 3px; border: 1px solid #dbe3ee; vertical-align: top; font-family: Arial, sans-serif; color: #374151; font-size: 10px; line-height: 1.3; word-break: normal; overflow-wrap: break-word;">
           ${content}
         </td>
       `;
@@ -216,7 +241,7 @@ export function buildWeeklyMovementEmail(
     const title = [generator.codigo, generator.modelo].filter(Boolean).join(' · ');
     return `
       <tr class="generator-row" data-generator-id="${escapeHtml(generator.id)}">
-        <th scope="row" style="width: 16%; padding: 7px; border: 1px solid #dbe3ee; background-color: #f8fafc; font-family: Arial, sans-serif; color: #111827; font-size: 11px; line-height: 1.4; text-align: left; vertical-align: top; word-break: break-word;">
+        <th scope="row" width="10%" style="width: 10%; padding: 5px 3px; border: 1px solid #dbe3ee; background-color: #f8fafc; font-family: Arial, sans-serif; color: #111827; font-size: 10px; line-height: 1.3; text-align: left; vertical-align: top; word-break: normal; overflow-wrap: break-word;">
           ${escapeHtml(title)}
         </th>
         ${cells}
@@ -239,12 +264,17 @@ export function buildWeeklyMovementEmail(
             <table role="table" aria-label="Calendario semanal por generador" border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; table-layout: fixed; border: 1px solid #dbe3ee; border-collapse: collapse;">
               <thead>
                 <tr>
-                  <th scope="col" style="width: 16%; padding: 8px 4px; border: 1px solid #dbe3ee; background-color: #eef2f7; font-family: Arial, sans-serif; color: #111827; font-size: 11px; text-align: left;">Generador</th>
+                  <th scope="col" width="10%" style="width: 10%; padding: 8px 3px; border: 1px solid #dbe3ee; background-color: #eef2f7; font-family: Arial, sans-serif; color: #111827; font-size: 10px; text-align: left;">Generador</th>
                   ${headerCells}
                 </tr>
               </thead>
               <tbody>${generatorRowsHtml}</tbody>
             </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 0 12px 20px;">
+            ${movementSummary.html}
           </td>
         </tr>
         <tr>
@@ -259,14 +289,9 @@ export function buildWeeklyMovementEmail(
             <strong>Completados:</strong> ${completedCount}
           </td>
         </tr>
-        <tr>
-          <td style="padding: 0 12px 20px;">
-            ${movementSummary.html}
-          </td>
-        </tr>
       </tbody>
     </table>
   `;
 
-  return { html, text };
+  return { html, text, subjectDateRange };
 }
