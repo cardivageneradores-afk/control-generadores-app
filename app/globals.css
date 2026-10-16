@@ -421,7 +421,7 @@ h1, h2, h3, h4 {
 
 .movement-row {
   display: block;
-  padding: 10px 0;
+  padding: 7px 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -434,9 +434,9 @@ h1, h2, h3, h4 {
 
 .movement-details {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px 16px;
-  margin: 10px 8px 2px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px 12px;
+  margin: 6px 8px 0;
 }
 
 .movement-detail {
@@ -444,7 +444,7 @@ h1, h2, h3, h4 {
 }
 
 .movement-detail.comments {
-  grid-column: 1 / -1;
+  grid-column: auto;
 }
 
 .movement-detail-label,
@@ -454,13 +454,13 @@ h1, h2, h3, h4 {
 
 .movement-detail-label {
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
 }
 
 .movement-detail-value {
   overflow-wrap: anywhere;
-  font-size: 13px;
+  font-size: 16px;
 }
 
 .date-pill,
@@ -1092,7 +1092,7 @@ textarea:focus-visible {
 }
 
 .movement-row {
-  padding: 12px 4px;
+  padding: 8px 4px;
   border-color: rgba(129, 144, 160, 0.16);
 }
 
@@ -1101,7 +1101,16 @@ textarea:focus-visible {
 }
 
 .movement-details {
-  margin: 10px 4px 2px;
+  gap: 4px 10px;
+  margin: 6px 4px 0;
+}
+
+.movement-detail-label {
+  font-size: 13px;
+}
+
+.movement-detail-value {
+  font-size: 16px;
 }
 
 .date-pill,
@@ -1332,7 +1341,7 @@ textarea:focus-visible {
 
   .movement-details {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px 12px;
+    gap: 6px 12px;
     margin-inline: 0;
   }
 
@@ -1350,6 +1359,10 @@ textarea:focus-visible {
 
   .movement-row {
     align-items: flex-start;
+  }
+
+  .movement-detail-value {
+    font-size: 15px;
   }
 
   .route-pill {
