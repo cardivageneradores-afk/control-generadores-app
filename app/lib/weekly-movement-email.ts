@@ -226,7 +226,7 @@ export function buildWeeklyMovementEmail(
   ].join('\n');
 
   const headerCells = weekDays.map((day) => `
-    <th scope="col" width="12.85%" style="width: 12.85%; padding: 8px 4px; border: 1px solid #dbe3ee; background-color: #eef2f7; font-family: Arial, sans-serif; color: #111827; font-size: 11px; line-height: 1.3; text-align: center;">
+    <th scope="col" width="12.85%" style="width: 12.85%; padding: 9px 5px; border: 1px solid #dbe3ee; background-color: #eef2f7; font-family: Arial, sans-serif; color: #111827; font-size: 13px; line-height: 1.35; text-align: center;">
       ${escapeHtml(day.shortLabel)}
     </th>
   `).join('');
@@ -235,9 +235,9 @@ export function buildWeeklyMovementEmail(
       const cellMovements = movementsByGeneratorAndDate.get(generator.id)?.get(day.date) ?? [];
       const content = cellMovements.length
         ? cellMovements.map((movement) => formatMovementHtml(movement)).join('')
-        : `<span style="font-size: 10px; color: #4b5563;">Ubicación: ${escapeHtml(generator.ubicacion?.trim() || '—')}</span>`;
+        : `<span style="font-size: 12px; color: #4b5563;">Ubicación: ${escapeHtml(generator.ubicacion?.trim() || '—')}</span>`;
       return `
-        <td data-calendar-cell="${escapeHtml(`${generator.id}:${day.date}`)}" width="12.85%" style="width: 12.85%; padding: 3px; border: 1px solid #dbe3ee; vertical-align: top; font-family: Arial, sans-serif; color: #374151; font-size: 10px; line-height: 1.3; word-break: normal; overflow-wrap: break-word;">
+        <td data-calendar-cell="${escapeHtml(`${generator.id}:${day.date}`)}" width="12.85%" style="width: 12.85%; padding: 4px; border: 1px solid #dbe3ee; vertical-align: top; font-family: Arial, sans-serif; color: #374151; font-size: 12px; line-height: 1.4; word-break: normal; overflow-wrap: break-word;">
           ${content}
         </td>
       `;
@@ -245,7 +245,7 @@ export function buildWeeklyMovementEmail(
     const title = [generator.codigo, generator.modelo].filter(Boolean).join(' · ');
     return `
       <tr class="generator-row" data-generator-id="${escapeHtml(generator.id)}">
-        <th scope="row" width="10%" style="width: 10%; padding: 5px 3px; border: 1px solid #dbe3ee; background-color: #f8fafc; font-family: Arial, sans-serif; color: #111827; font-size: 10px; line-height: 1.3; text-align: left; vertical-align: top; word-break: normal; overflow-wrap: break-word;">
+        <th scope="row" width="10%" style="width: 10%; padding: 6px 4px; border: 1px solid #dbe3ee; background-color: #f8fafc; font-family: Arial, sans-serif; color: #111827; font-size: 12px; line-height: 1.4; text-align: left; vertical-align: top; word-break: normal; overflow-wrap: break-word;">
           ${escapeHtml(title)}
         </th>
         ${cells}
@@ -253,7 +253,7 @@ export function buildWeeklyMovementEmail(
     `;
   }).join('');
   const html = `
-    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; max-width: 1120px; margin: 0 auto; border-collapse: collapse; font-family: Arial, sans-serif; color: #111827;">
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; max-width: 1320px; margin: 0 auto; border-collapse: collapse; font-family: Arial, sans-serif; color: #111827;">
       <tbody>
         <tr>
           <td style="padding: 20px 12px 12px;">
@@ -265,10 +265,10 @@ export function buildWeeklyMovementEmail(
         </tr>
         <tr>
           <td>
-            <table role="table" aria-label="Calendario semanal por generador" border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; table-layout: fixed; border: 1px solid #dbe3ee; border-collapse: collapse;">
+            <table role="table" aria-label="Calendario semanal por generador" border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; max-width: 1320px; table-layout: fixed; border: 1px solid #dbe3ee; border-collapse: collapse;">
               <thead>
                 <tr>
-                  <th scope="col" width="10%" style="width: 10%; padding: 8px 3px; border: 1px solid #dbe3ee; background-color: #eef2f7; font-family: Arial, sans-serif; color: #111827; font-size: 10px; text-align: left;">Generador</th>
+                  <th scope="col" width="10%" style="width: 10%; padding: 9px 4px; border: 1px solid #dbe3ee; background-color: #eef2f7; font-family: Arial, sans-serif; color: #111827; font-size: 12px; text-align: left;">Generador</th>
                   ${headerCells}
                 </tr>
               </thead>
@@ -278,7 +278,7 @@ export function buildWeeklyMovementEmail(
         </tr>
         <tr>
           <td style="padding: 0 12px 20px;">
-            ${movementSummary.html}
+            <div style="width: 100%; max-width: 1120px; margin: 0 auto;">${movementSummary.html}</div>
           </td>
         </tr>
         <tr>
@@ -288,9 +288,11 @@ export function buildWeeklyMovementEmail(
         </tr>
         <tr>
           <td style="padding: 4px 12px 20px; font-family: Arial, sans-serif; color: #374151; font-size: 14px; line-height: 1.6;">
+            <div style="width: 100%; max-width: 1120px; margin: 0 auto;">
             <strong>Movimientos:</strong> ${weekMovements.length}<br>
             <strong>Pendientes:</strong> ${pendingCount}<br>
             <strong>Completados:</strong> ${completedCount}
+            </div>
           </td>
         </tr>
       </tbody>
