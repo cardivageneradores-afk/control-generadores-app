@@ -91,12 +91,16 @@ test('renders a generator-by-date grid with movement details in the matching cel
   assert.ok(email.html.includes('Movimientos:</strong> 1'));
   assert.ok(email.html.includes('Pendientes:</strong> 1'));
   assert.ok(email.html.includes('Completados:</strong> 0'));
+  assert.equal(email.subjectDateRange, '5-11 oct 2026');
   const detailsHeading = email.html.indexOf('<h2>Detalle de movimientos</h2>');
-  assert.ok(detailsHeading > email.html.indexOf('Completados:</strong> 0'));
+  assert.ok(detailsHeading > email.html.indexOf('Calendario semanal por generador'));
+  const weeklySummaryHeading = email.html.indexOf('>Resumen semanal</h2>');
+  assert.ok(weeklySummaryHeading > detailsHeading);
+  assert.ok(email.text.indexOf('Detalle de movimientos') < email.text.indexOf('Resumen semanal'));
   const emailDetails = email.html.slice(detailsHeading);
   for (const detail of [
-    'Fecha', 'Generador', 'Origen', 'Hora de recogida', 'Destino',
-    'Hora de entrega', 'Transporte', 'Notas / comentarios', 'Estado',
+    'Origen', 'Destino', 'Recogida', 'Entrega', 'Transporte',
+    'Notas / comentarios', 'Estado', 'Registrado por', 'Creado',
   ]) {
     assert.ok(emailDetails.includes(detail), `detailed email summary should include ${detail}`);
   }
@@ -188,9 +192,10 @@ test('highlights edited movements but leaves new movements unmarked and identifi
   const editedMovement = getMovementCard(fridayCell, 'Almacén → Obra norte');
   const newMovement = getMovementCard(fridayCell, 'Almacén → Obra sur');
 
-  assert.match(editedMovement, /MOVIMIENTO EDITADO/);
+  assert.match(editedMovement, /aria-label="Movimiento editado"/);
+  assert.match(editedMovement, />EDITADO</);
   assert.match(editedMovement, /border: 2px solid #c2410c/);
-  assert.doesNotMatch(newMovement, /MOVIMIENTO EDITADO/);
+  assert.doesNotMatch(newMovement, /aria-label="Movimiento editado"/);
   assert.match(email.html, /Enviado por: <strong>Ana &lt;Admin&gt;<\/strong> \(ana@example\.com\)/);
   assert.ok(email.text.includes('Enviado por: Ana <Admin> (ana@example.com)'));
   assert.match(email.text, /\[MOVIMIENTO EDITADO\]/);
@@ -208,7 +213,9 @@ test('highlights edited movements but leaves new movements unmarked and identifi
     [generator],
     new Date('2026-10-16T10:00:00Z'),
   );
-  assert.equal((nextWeekEmail.html.match(/MOVIMIENTO EDITADO/g) ?? []).length, 2);
+  assert.equal((nextWeekEmail.html.match(/aria-label="Movimiento editado"/g) ?? []).length, 2);
+  assert.equal((nextWeekEmail.html.match(/>EDITADO</g) ?? []).length, 1);
+  assert.equal(nextWeekEmail.subjectDateRange, '12-18 oct 2026');
   assert.equal((nextWeekEmail.text.match(/\[MOVIMIENTO EDITADO\]/g) ?? []).length, 2);
   assert.doesNotMatch(nextWeekEmail.html, /m-1/);
   assert.doesNotMatch(nextWeekEmail.text, /m-1/);
@@ -233,5 +240,97 @@ test('escapes dynamic HTML values and preserves readable plain text and long com
   assert.ok(email.html.includes('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;&amp;'));
   assert.ok(email.html.includes('Avisar a &lt;operaciones&gt;'));
   assert.doesNotMatch(email.html, /<script>|<operaciones>/);
-  assert.match(email.html, /word-break: break-word/);
+  assert.match(email.html, /word-break: normal/);
+  assert.match(email.html, /overflow-wrap: break-word/);
+});
+
+test('formats the subject date range compactly across month and year boundaries', () => {
+  const sameMonth = buildWeeklyMovementEmail([], [generator], new Date('2026-10-14T10:00:00Z'));
+  const crossMonth = buildWeeklyMovementEmail([], [generator], new Date('2025-10-01T10:00:00Z'));
+  const crossYear = buildWeeklyMovementEmail([], [generator], new Date('2025-12-31T10:00:00Z'));
+
+  assert.equal(sameMonth.subjectDateRange, '12-18 oct 2026');
+  assert.equal(crossMonth.subjectDateRange, '29 sep - 5 oct 2025');
+  assert.equal(crossYear.subjectDateRange, '29 dic 2025 - 4 ene 2026');
+});
+
+test('uses compact inline table styles for a readable movement card', () => {
+  const email = buildWeeklyMovementEmail(
+    [{ ...movement, notas: 'A nombre completo con comentario largo para comprobar el ajuste entre palabras.', editado_en: '2026-10-09T10:30:00.000Z' }],
+    [generator],
+    new Date('2026-10-09T10:00:00Z'),
+  );
+  const cell = getCalendarCell(email.html, 'g-1:2026-10-09');
+  const card = getMovementCard(cell, 'Almacén → Obra norte');
+
+  assert.match(email.html, /table-layout: fixed/);
+  assert.match(email.html, /<th scope="col" width="10%"/);
+  assert.match(email.html, /<td data-calendar-cell="g-1:2026-10-09" width="12\.85%"/);
+  assert.match(card, /font-size: 9px/);
+  assert.match(card, /padding: 4px/);
+  assert.match(card, /white-space: nowrap;">EDITADO/);
+  assert.match(card, /Recogida: 08:30 · Entrega: 10:15 · Estado: pendiente/);
+  assert.match(card, /Comentarios: <span[^>]*>A nombre completo con comentario largo para comprobar el ajuste entre palabras\.<\/span>/);
+  assert.match(getCalendarCell(email.html, 'g-1:2026-10-05'), /font-size: 10px; color: #4b5563/);
+});
+
+test('orders separated detail cards by date and time with matching fixed-width detail columns', () => {
+  const movements = [
+    {
+      ...movement,
+      id: 'm-early',
+      fecha: '2026-10-15',
+      hora_recogida: '08:00:00',
+      destino: 'Destino temprano',
+      usuario: 'Ana',
+      creado_en: '2026-10-14T08:00:00.000Z',
+    },
+    {
+      ...movement,
+      id: 'm-latest',
+      fecha: '2026-10-16',
+      hora_recogida: '15:30:00',
+      destino: 'Destino último',
+      estado: 'completado',
+      usuario: 'Berta',
+      creado_en: '2026-10-16T08:00:00.000Z',
+      completado_en: '2026-10-16T14:00:00.000Z',
+      editado_en: '2026-10-16T15:00:00.000Z',
+      notas: 'Comentario completo del movimiento reciente',
+    },
+    {
+      ...movement,
+      id: 'm-middle',
+      fecha: '2026-10-15',
+      hora_recogida: '12:00:00',
+      destino: 'Destino mediodía',
+    },
+  ];
+  const email = buildWeeklyMovementEmail(
+    movements,
+    [generator],
+    new Date('2026-10-16T10:00:00Z'),
+  );
+  const details = email.html.slice(email.html.indexOf('<h2>Detalle de movimientos</h2>'));
+  const latestIndex = details.indexOf('16 oct 2026 · G-101 · Volvo 440');
+  const middleIndex = details.indexOf('Destino mediodía');
+  const earlyIndex = details.indexOf('Destino temprano');
+
+  assert.ok(latestIndex >= 0 && latestIndex < middleIndex && middleIndex < earlyIndex);
+  assert.equal((details.match(/height="16"/g) ?? []).length, 2);
+  assert.equal((details.match(/<col width="15%"/g) ?? []).length, 6);
+  assert.equal((details.match(/<col width="35%"/g) ?? []).length, 6);
+  assert.match(details, /MOVIMIENTO EDITADO/);
+  for (const detail of [
+    'Origen', 'Almacén', 'Destino último', 'Recogida', '08:00', 'Entrega', '10:15',
+    'Transporte', 'Local', 'Estado', 'completado', 'Registrado por', 'Berta',
+    'Creado', 'Completado', 'Notas / comentarios', 'Comentario completo del movimiento reciente',
+  ]) {
+    assert.ok(details.includes(detail), `detail cards should include ${detail}`);
+  }
+  assert.match(details, /Completado<\/td>[\s\S]*?16\/10\/2026/);
+  assert.doesNotMatch(
+    details.slice(details.indexOf('15 oct 2026 · G-101 · Volvo 440')),
+    /Completado<\/td>/,
+  );
 });
