@@ -1433,8 +1433,8 @@ textarea:focus-visible {
 
 @media (max-width: 740px) {
   .calendar-scroll {
-    scroll-padding-left: 84px;
-    margin-inline: -2px;
+    scroll-padding-left: 89px;
+    margin-inline: 0;
     padding-bottom: 6px;
   }
 
