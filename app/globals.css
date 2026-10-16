@@ -326,6 +326,28 @@ h1, h2, h3, h4 {
   flex-wrap: wrap;
 }
 
+.calendar-week-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.calendar-week-nav h3 {
+  margin: 0;
+}
+
+.calendar-week-arrow {
+  min-width: 36px;
+  padding: 8px;
+}
+
+.calendar-week-today:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .legend {
   display: flex;
   gap: 14px;
@@ -1291,6 +1313,17 @@ textarea:focus-visible {
 
   .calendar-header h3 {
     font-size: 18px;
+  }
+
+  .calendar-week-nav {
+    width: 100%;
+    flex-wrap: nowrap;
+  }
+
+  .calendar-week-nav h3 {
+    flex: 1;
+    text-align: center;
+    white-space: nowrap;
   }
 
   .calendar-actions {

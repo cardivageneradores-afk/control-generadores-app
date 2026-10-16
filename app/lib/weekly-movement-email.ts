@@ -95,6 +95,10 @@ function formatSubjectDateRange(weekDays: WeekDay[]) {
   return `${start.day}-${end.day} ${end.month} ${end.year}`;
 }
 
+export function buildWeeklyMovementSubject(dateRange: string) {
+  return `Movimiento Generadores · ${dateRange}`;
+}
+
 function formatTime(value?: string) {
   return value ? value.slice(0, 5) : 'Sin indicar';
 }

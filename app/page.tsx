@@ -2,8 +2,9 @@
 
 import Image from 'next/image';
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Copy, LogOut, Mail, Pencil, Plus, Trash2, Users } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Copy, LogOut, Mail, Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { buildMovementSummary, getMovementDetailFields } from './lib/movement-summary';
+import { filterMovementsByWeek, getWeekDates } from './lib/calendar-week';
 
 type Role = 'editor' | 'lector';
 type GeneratorStatus = 'estable' | 'en-oficina' | 'en-transito';
@@ -76,20 +77,6 @@ function isoDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-function getWeekDates() {
-  const today = new Date();
-  const monday = new Date(today);
-  const day = (today.getDay() + 6) % 7;
-  monday.setHours(0, 0, 0, 0);
-  monday.setDate(today.getDate() - day);
-
-  return Array.from({ length: 7 }, (_, index) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + index);
-    return d;
-  });
-}
-
 function formatDate(date: string) {
   return new Date(`${date}T00:00:00`).toLocaleDateString('es-ES', {
     day: '2-digit',
@@ -149,6 +136,9 @@ export default function Page() {
   const [isGeneratorsOpen, setIsGeneratorsOpen] = useState(false);
   const [login, setLogin] = useState({ email: 'admin@empresa.com', password: 'admin123' });
   const [loginError, setLoginError] = useState('');
+  const [weekOffset, setWeekOffset] = useState(0);
+  const weekDates = getWeekDates(new Date(), weekOffset);
+  const visibleWeekStart = isoDate(weekDates[0]);
 
   const pendingMovements = useMemo(
     () =>
@@ -435,11 +425,15 @@ export default function Page() {
   };
 
   const copySummary = async () => {
-    const { text } = buildMovementSummary(state.movimientos, state.generadores);
+    const weekMovements = filterMovementsByWeek(state.movimientos, weekDates);
+    const { text } = buildMovementSummary(weekMovements, state.generadores, {
+      heading: 'Resumen semanal',
+      emptyMessage: 'No hay movimientos esta semana.',
+    });
 
     try {
       await navigator.clipboard.writeText(text);
-      setToast('Resumen copiado al portapapeles.');
+      setToast('Resumen de la semana visible copiado al portapapeles.');
     } catch {
       setToast('No se pudo copiar el resumen.');
     }
@@ -448,7 +442,10 @@ export default function Page() {
   const sendSummary = async () => {
     setEmailError(null);
     try {
-      const result = await api<{ mode?: string; partial?: boolean; message?: string }>('/api/enviar-resumen', { method: 'POST' });
+      const result = await api<{ mode?: string; partial?: boolean; message?: string }>('/api/enviar-resumen', {
+        method: 'POST',
+        body: JSON.stringify({ weekStart: visibleWeekStart }),
+      });
       setToast(result.mode === 'demo'
         ? 'Envío simulado en desarrollo; no se envió ningún email.'
         : result.partial && result.message ? result.message : 'Resumen enviado por email.');
@@ -458,8 +455,6 @@ export default function Page() {
       setToast(message);
     }
   };
-
-  const weekDates = getWeekDates();
 
   return (
     <>
@@ -634,9 +629,31 @@ export default function Page() {
 
           <section>
             <div className="calendar-header">
-              <h3>
-                {weekDates[0].toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} – {weekDates[6].toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
-              </h3>
+              <div className="calendar-week-nav">
+                <button
+                  type="button"
+                  className="button ghost calendar-week-arrow"
+                  aria-label="Semana anterior"
+                  title="Semana anterior"
+                  onClick={() => setWeekOffset((offset) => offset - 1)}
+                ><ChevronLeft size={16} /></button>
+                <h3 aria-live="polite">
+                  {weekDates[0].toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} – {weekDates[6].toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </h3>
+                <button
+                  type="button"
+                  className="button ghost calendar-week-arrow"
+                  aria-label="Semana siguiente"
+                  title="Semana siguiente"
+                  onClick={() => setWeekOffset((offset) => offset + 1)}
+                ><ChevronRight size={16} /></button>
+                <button
+                  type="button"
+                  className="button ghost calendar-week-today"
+                  onClick={() => setWeekOffset(0)}
+                  disabled={weekOffset === 0}
+                >Hoy</button>
+              </div>
               <div className="calendar-actions">
                 <button className="button ghost" onClick={copySummary}><Copy size={15} /> Copiar resumen</button>
                 {!isReadOnly ? (
