@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withStoreErrorHandling } from '@/app/lib/api-errors';
 import { getEditorFromRequest } from '@/app/lib/auth';
+import { normalizeLocation } from '@/app/lib/generator-location';
 import { getStore, setStore } from '@/app/lib/store';
 
 export const POST = withStoreErrorHandling(async (request: Request) => {
@@ -11,7 +12,7 @@ export const POST = withStoreErrorHandling(async (request: Request) => {
   const body = await request.json().catch(() => ({}));
   const codigo = String(body.codigo ?? '').trim();
   const modelo = String(body.modelo ?? '').trim();
-  const ubicacion = String(body.ubicacion ?? 'Oficina').trim() || 'Oficina';
+  const ubicacion = normalizeLocation(body.ubicacion);
   const estado = String(body.estado ?? 'en-oficina');
 
   if (!codigo) {

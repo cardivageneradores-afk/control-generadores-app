@@ -1,4 +1,5 @@
 import { DEMO_STATE } from './demo-data';
+import { normalizeLocation } from './generator-location';
 import { toAppUser } from './roles';
 import { replaceRevisionedState, StaleStateError } from './revisioned-write';
 import {
@@ -93,9 +94,9 @@ export async function getStore(): Promise<AppState> {
   return {
     revision,
     usuarios: users.map((row) => toAppUser(row)) as User[],
-    generadores: generators as Generator[],
+    generadores: generators.map((row) => ({ ...row, ubicacion: normalizeLocation(row.ubicacion) })) as Generator[],
     movimientos: movements as Movement[],
-    ubicaciones: Array.from(new Set(generators.map((row) => row.ubicacion))).sort(),
+    ubicaciones: Array.from(new Set(generators.map((row) => normalizeLocation(row.ubicacion)))).sort(),
     destinatarios: snapshot.destinatarios,
     me: null,
   };
