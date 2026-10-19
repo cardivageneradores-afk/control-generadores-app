@@ -400,6 +400,18 @@ h1, h2, h3, h4 {
   color: var(--text-faint);
 }
 
+.calendar-cell.clickable {
+  cursor: pointer;
+}
+
+.calendar-cell.clickable:hover,
+.calendar-cell.clickable:focus-visible {
+  background: rgba(59, 130, 246, 0.1);
+  outline: 1px dashed rgba(96, 165, 250, 0.6);
+  outline-offset: -2px;
+  color: var(--text);
+}
+
 .calendar-cell.row-label {
   background: var(--panel);
   font-weight: 700;
