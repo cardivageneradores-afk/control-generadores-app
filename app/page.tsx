@@ -7,8 +7,8 @@ import { buildMovementSummary, getMovementDetailFields } from './lib/movement-su
 import { filterMovementsByWeek, getWeekDates } from './lib/calendar-week';
 import PushToggle from './push-toggle';
 import { invalidRoleMessage } from './lib/roles';
-import { fixedLocation } from './lib/generator-location';
-import { currentLocation, type CompletionAction } from './lib/movement-completion';
+import { DEFAULT_FIXED_LOCATION, fixedLocation } from './lib/generator-location';
+import type { CompletionAction } from './lib/movement-completion';
 
 type Role = 'editor' | 'lector';
 type GeneratorStatus = 'estable' | 'en-oficina' | 'en-transito';
@@ -96,10 +96,8 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-function statusClass(status: GeneratorStatus) {
-  if (status === 'estable') return 'pill stable';
-  if (status === 'en-transito') return 'pill transit';
-  return 'pill office';
+function locationPillClass(location: string) {
+  return location === DEFAULT_FIXED_LOCATION ? 'pill office' : 'pill other';
 }
 
 function transportTone(type: TransportType) {
@@ -366,7 +364,7 @@ export default function Page() {
   const saveGeneratorLocation = async () => {
     if (!editingLocation) return;
     if (!editingLocation.ubicacion.trim()) {
-      setToast('Indica la ubicación fija.');
+      setToast('Indica la ubicación actual.');
       return;
     }
     try {
@@ -375,7 +373,7 @@ export default function Page() {
         body: JSON.stringify({ ubicacion: editingLocation.ubicacion }),
       });
       setEditingLocation(null);
-      setToast('Ubicación fija actualizada.');
+      setToast('Ubicación actual actualizada.');
       await refresh();
     } catch (error) {
       setToast(error instanceof Error ? error.message : 'No se pudo guardar la ubicación.');
@@ -651,14 +649,19 @@ export default function Page() {
                           <div className="generator-code">{generator.codigo}</div>
                           <div className="generator-model">{generator.modelo}</div>
                         </div>
-                        <span className={statusClass(generator.estado)}>{generator.estado === 'estable' ? 'Estable' : generator.estado === 'en-transito' ? 'En tránsito' : 'En oficina'}</span>
-                      </div>
-                      <div className="location-box">
-                        <small>Ubicación actual</small>
-                        <div>{currentLocation(generator, state.movimientos, fixedLocation(generator))}</div>
-                        {currentLocation(generator, state.movimientos, fixedLocation(generator)) !== fixedLocation(generator) ? (
-                          <small>Ubicación fija: {fixedLocation(generator)}</small>
-                        ) : null}
+                        {isReadOnly ? (
+                          <span className={locationPillClass(fixedLocation(generator))}>{fixedLocation(generator)}</span>
+                        ) : (
+                          <button
+                            type="button"
+                            className={`${locationPillClass(fixedLocation(generator))} pill-button`}
+                            aria-label={`Ubicación actual de ${generator.codigo}: ${fixedLocation(generator)}. Pulsa para cambiarla`}
+                            title="Cambiar ubicación actual"
+                            onClick={() => setEditingLocation({ id: generator.id, codigo: generator.codigo, ubicacion: fixedLocation(generator) })}
+                          >
+                            {fixedLocation(generator)}
+                          </button>
+                        )}
                       </div>
                       {related.length ? (
                         <div className="pending-box">
@@ -680,9 +683,6 @@ export default function Page() {
                       {!isReadOnly ? (
                         <div className="generator-actions">
                           <button className="button ghost" onClick={() => openMoveModal(generator.id)}>+ Registrar movimiento</button>
-                          <button className="button ghost" onClick={() => setEditingLocation({ id: generator.id, codigo: generator.codigo, ubicacion: fixedLocation(generator) })}>
-                            <Pencil size={15} /> Ubicación fija
-                          </button>
                           <button className="button danger" onClick={() => deleteGenerator(generator)}>
                             <Trash2 size={15} /> Eliminar
                           </button>
@@ -790,7 +790,7 @@ export default function Page() {
                             })}
                           </div>
                         ) : (
-                          <span className="calendar-location">{currentLocation(generator, state.movimientos, fixedLocation(generator))}</span>
+                          <span className="calendar-location">{fixedLocation(generator)}</span>
                         )}
                       </div>
                     );
@@ -861,7 +861,7 @@ export default function Page() {
               <input value={generatorForm.modelo} onChange={(e) => setGeneratorForm({ ...generatorForm, modelo: e.target.value })} />
             </div>
             <div className="field">
-              <label>Ubicación fija</label>
+              <label>Ubicación actual</label>
               <input value={generatorForm.ubicacion} list="locations-list" placeholder="Oficina" maxLength={60} onChange={(e) => setGeneratorForm({ ...generatorForm, ubicacion: e.target.value })} />
             </div>
             <div className="field">
@@ -883,9 +883,9 @@ export default function Page() {
       {editingLocation ? (
         <div className="modal-overlay" onClick={() => setEditingLocation(null)}>
           <div className="modal" onClick={(event) => event.stopPropagation()}>
-            <h3>Ubicación fija · {editingLocation.codigo}</h3>
+            <h3>Ubicación actual · {editingLocation.codigo}</h3>
             <div className="field">
-              <label>Ubicación fija</label>
+              <label>Ubicación actual</label>
               <input
                 autoFocus
                 value={editingLocation.ubicacion}
@@ -1015,7 +1015,7 @@ export default function Page() {
       ) : null}
 
       <datalist id="locations-list">
-        {state.ubicaciones.map((location) => (
+        {Array.from(new Set([DEFAULT_FIXED_LOCATION, ...state.ubicaciones, ...state.generadores.map((g) => fixedLocation(g)), ...state.movimientos.flatMap((m) => [m.origen, m.destino])].map((v) => (v ?? '').trim()).filter(Boolean))).sort().map((location) => (
           <option key={location} value={location} />
         ))}
       </datalist>

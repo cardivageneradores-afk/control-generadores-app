@@ -43,18 +43,12 @@ export function completeMovementWithAction<T extends MovementLike>(
   return { ok: true, movimiento, movimientos: movements.map((movement) => (movement.id === id ? movimiento : movement)) };
 }
 
-// Ubicación actual: la del último movimiento completado con resultado (entregado = destino,
-// recogido = origen); si no hay ninguno, la ubicación fija del generador.
-export function currentLocation(
-  generator: { id: string; ubicacion?: unknown },
-  movements: MovementLike[],
-  fixed: string,
-): string {
-  const last = movements
-    .filter((movement) => movement.generador_id === generator.id && movement.estado === 'completado' && (movement.resultado === 'entregado' || movement.resultado === 'recogido'))
-    .sort((a, b) => String(a.completado_en ?? '').localeCompare(String(b.completado_en ?? '')) || a.id.localeCompare(b.id))
-    .at(-1);
-  if (!last) return fixed;
-  const place = (last.resultado === 'entregado' ? last.destino : last.origen)?.trim();
-  return place || fixed;
+// La ubicación actual del generador (campo `ubicacion`) pasa a ser el destino (entregado) o el origen (recogido).
+export function applyCompletionLocation<G extends { id: string; ubicacion?: unknown }>(
+  generators: G[],
+  movement: Pick<MovementLike, 'generador_id' | 'origen' | 'destino' | 'resultado'>,
+): G[] {
+  const place = (movement.resultado === 'entregado' ? movement.destino : movement.resultado === 'recogido' ? movement.origen : '')?.replace(/\s+/g, ' ').trim().slice(0, 60);
+  if (!place) return generators;
+  return generators.map((generator) => (generator.id === movement.generador_id ? { ...generator, ubicacion: place } : generator));
 }

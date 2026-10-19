@@ -1481,3 +1481,7 @@ textarea:focus-visible {
   padding: 2px 0 0;
 }
 .push-help { flex-basis: 100%; max-width: 360px; color: var(--muted, #9aa4b5); font-size: 12px; line-height: 1.4; }
+.pill.other { background: rgba(148, 163, 184, 0.16); color: var(--text, #e5e7eb); }
+.pill-button { border: 0; cursor: pointer; font-family: inherit; max-width: 60%; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.pill-button:hover { filter: brightness(1.15); }
+.pill-button:focus-visible { outline: 2px solid var(--amber, #f5b942); outline-offset: 2px; }

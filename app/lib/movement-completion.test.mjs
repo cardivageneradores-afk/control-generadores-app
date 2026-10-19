@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { completeMovementWithAction, currentLocation, parseCompletionAction } from './movement-completion.ts';
+import { applyCompletionLocation, completeMovementWithAction, parseCompletionAction } from './movement-completion.ts';
 
 const now = new Date('2026-10-16T09:30:00Z');
 const pending = (overrides = {}) => ({ id: 'm1', generador_id: 'g1', origen: 'Oficina', destino: 'Obra Norte', estado: 'pendiente', ...overrides });
@@ -29,18 +29,14 @@ test('movimiento inexistente o ya completado se rechaza', () => {
   assert.deepEqual(completeMovementWithAction([done], 'm1', 'recogido', 'x', now), { ok: false, error: 'already_completed' });
 });
 
-test('ubicación actual: entregado = destino, recogido = origen, sin resultado = fija', () => {
-  const generator = { id: 'g1' };
-  assert.equal(currentLocation(generator, [pending()], 'Oficina'), 'Oficina');
-  const legacy = pending({ estado: 'completado', completado_en: '2026-10-01T10:00:00Z' });
-  assert.equal(currentLocation(generator, [legacy], 'Oficina'), 'Oficina');
-  const delivered = pending({ id: 'a', estado: 'completado', resultado: 'entregado', completado_en: '2026-10-10T10:00:00Z' });
-  assert.equal(currentLocation(generator, [delivered], 'Oficina'), 'Obra Norte');
-  const picked = pending({ id: 'b', estado: 'completado', resultado: 'recogido', origen: 'Obra Norte', destino: 'Taller', completado_en: '2026-10-12T10:00:00Z' });
-  assert.equal(currentLocation(generator, [delivered, picked], 'Oficina'), 'Obra Norte');
-  assert.equal(currentLocation({ id: 'g2' }, [delivered, picked], 'Puerto'), 'Puerto');
+test('al completar, la ubicación actual del generador pasa a destino (entregado) u origen (recogido)', () => {
+  const generators = [{ id: 'g1', ubicacion: 'CIMA' }, { id: 'g2', ubicacion: 'Oficina' }];
+  const base = { generador_id: 'g1', origen: 'HM Sant Jordi', destino: 'Clínica Corachan' };
+  assert.deepEqual(applyCompletionLocation(generators, { ...base, resultado: 'entregado' }), [{ id: 'g1', ubicacion: 'Clínica Corachan' }, generators[1]]);
+  assert.equal(applyCompletionLocation(generators, { ...base, resultado: 'recogido' })[0].ubicacion, 'HM Sant Jordi');
+  assert.equal(applyCompletionLocation(generators, { ...base, resultado: null }), generators);
+  assert.equal(applyCompletionLocation(generators, { ...base, destino: '  ', resultado: 'entregado' }), generators);
 });
-
 const read = (path) => readFileSync(new URL(`../api/${path}`, import.meta.url), 'utf8');
 
 test('permisos: completar abre a lector pero exige sesión; el resto exige editor', () => {
