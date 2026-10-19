@@ -1,4 +1,5 @@
 import { DEMO_STATE } from './demo-data';
+import { toAppUser } from './roles';
 import { replaceRevisionedState, StaleStateError } from './revisioned-write';
 import {
   classifySupabaseFailure,
@@ -91,13 +92,7 @@ export async function getStore(): Promise<AppState> {
 
   return {
     revision,
-    usuarios: users.map((row) => ({
-      id: row.id,
-      email: row.email,
-      nombre: row.nombre,
-      rol: row.rol,
-      passwordHash: row.password_hash,
-    })) as User[],
+    usuarios: users.map((row) => toAppUser(row)) as User[],
     generadores: generators as Generator[],
     movimientos: movements as Movement[],
     ubicaciones: Array.from(new Set(generators.map((row) => row.ubicacion))).sort(),

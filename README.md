@@ -30,6 +30,18 @@ Sin credenciales, el fallback solo funciona si `NODE_ENV` no es `production` y s
 6. Comprueba que puedes iniciar sesión y elimina `ADMIN_SETUP_TOKEN` de Vercel. Haz un nuevo deploy. La ruta rechaza cualquier alta después de existir un usuario y queda deshabilitada sin el token.
 7. Define un `SESSION_SECRET` aleatorio de al menos 32 caracteres. La sesión es una cookie httpOnly firmada y cada request vuelve a validar el usuario y su rol en Supabase.
 
+## Usuarios y roles
+
+Roles permitidos (en minúsculas): `editor` (puede crear/editar) y `lector` (solo consulta). La forma recomendada de crear usuarios es la pantalla **Usuarios** de la app. Si insertas uno a mano en `public.usuarios`, usa exactamente esos valores:
+
+```sql
+insert into public.usuarios (email, nombre, rol, password_hash) values (...);  -- rol = 'editor' o 'lector'
+update public.usuarios set rol = 'editor' where lower(email) = 'persona@empresa.com';
+```
+
+- La cookie de sesión solo guarda el identificador del usuario; el rol efectivo se lee de la base de datos en **cada petición**, así que un cambio de rol se aplica de inmediato sin cerrar sesión. La pantalla abierta se actualiza al volver a la pestaña (o al recargar).
+- La app tolera mayúsculas/espacios (`Editor`), pero un rol desconocido se trata como solo lectura y se avisa en pantalla («Rol no válido»). Al crear usuarios desde la API, un rol inválido devuelve error 400.
+
 ## Copias de seguridad y restauración
 
 Antes de cualquier cambio de esquema o despliegue importante, confirma en **Supabase Dashboard > Database > Backups** qué copias automáticas y retención están disponibles para el plan del proyecto. La disponibilidad de PITR, su ventana de retención y los tiempos de recuperación dependen del plan; compruébalos en el dashboard y no des por hecho que están habilitados.

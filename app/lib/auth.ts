@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { getStore } from './store';
+import { isEditorRole } from './roles';
 import type { User } from './types';
 
 export const SESSION_COOKIE_NAME = 'control_generadores_session';
@@ -50,7 +51,7 @@ export async function getPublicUserFromRequest(request: Request): Promise<Omit<U
 }
 export async function getEditorFromRequest(request: Request) {
   const user = await getPublicUserFromRequest(request);
-  return user?.rol === 'editor' ? user : null;
+  return user && isEditorRole(user.rol) ? user : null;
 }
 export function createSessionToken(user: User) {
   const payload = encode(JSON.stringify({ sub: user.id, exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE } satisfies SessionPayload));

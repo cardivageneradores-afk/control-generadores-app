@@ -4,6 +4,7 @@ import { withStoreErrorHandling } from '@/app/lib/api-errors';
 import { getEditorFromRequest } from '@/app/lib/auth';
 import { getStore, setStore } from '@/app/lib/store';
 import { hashPassword } from '@/app/lib/password';
+import { invalidRoleMessage, normalizeRole } from '@/app/lib/roles';
 
 export const POST = withStoreErrorHandling(async (request: Request) => {
   if (!(await getEditorFromRequest(request))) {
@@ -14,14 +15,17 @@ export const POST = withStoreErrorHandling(async (request: Request) => {
   const email = String(body.email ?? '').trim();
   const nombre = String(body.nombre ?? '').trim();
   const password = String(body.password ?? '').trim();
-  const rol = String(body.rol ?? 'editor');
+  const rawRole = body.rol === undefined || body.rol === null || body.rol === '' ? 'editor' : String(body.rol);
+  const normalizedRole = normalizeRole(rawRole);
 
   if (!email || !nombre) {
     return NextResponse.json({ error: 'Nombre y email válidos son obligatorios.' }, { status: 400 });
   }
+  if (!normalizedRole) {
+    return NextResponse.json({ error: invalidRoleMessage(rawRole) }, { status: 400 });
+  }
 
   const state = await getStore();
-  const normalizedRole = rol === 'editor' || rol === 'lector' ? (rol as 'editor' | 'lector') : 'editor';
   const existing = state.usuarios.find((user) => user.email.toLowerCase() === email.toLowerCase());
 
   const passwordHash = password ? await hashPassword(password) : null;
@@ -32,6 +36,7 @@ export const POST = withStoreErrorHandling(async (request: Request) => {
               ...user,
               nombre,
               rol: normalizedRole,
+              rolInvalido: undefined,
               passwordHash: passwordHash ?? user.passwordHash,
             }
           : user,

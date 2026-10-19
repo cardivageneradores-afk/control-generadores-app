@@ -8,6 +8,7 @@ export interface User {
   email: string;
   nombre: string;
   rol: UserRole;
+  rolInvalido?: string;
   passwordHash: string;
 }
 

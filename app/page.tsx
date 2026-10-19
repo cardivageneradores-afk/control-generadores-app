@@ -5,6 +5,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, ChevronLeft, ChevronRight, Copy, LogOut, Mail, Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { buildMovementSummary, getMovementDetailFields } from './lib/movement-summary';
 import { filterMovementsByWeek, getWeekDates } from './lib/calendar-week';
+import { invalidRoleMessage } from './lib/roles';
 
 type Role = 'editor' | 'lector';
 type GeneratorStatus = 'estable' | 'en-oficina' | 'en-transito';
@@ -16,6 +17,7 @@ interface User {
   email: string;
   nombre: string;
   rol: Role;
+  rolInvalido?: string;
 }
 
 interface Generator {
@@ -184,6 +186,22 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
+    // El rol se lee de la base de datos en cada petición; el cliente lo refresca al volver a la pestaña.
+    let lastCheck = Date.now();
+    const recheck = () => {
+      if (document.visibilityState !== 'visible' || Date.now() - lastCheck < 10_000) return;
+      lastCheck = Date.now();
+      void refresh();
+    };
+    window.addEventListener('focus', recheck);
+    document.addEventListener('visibilitychange', recheck);
+    return () => {
+      window.removeEventListener('focus', recheck);
+      document.removeEventListener('visibilitychange', recheck);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!toast) return;
     const t = window.setTimeout(() => setToast(null), 2500);
     return () => window.clearTimeout(t);
@@ -191,7 +209,8 @@ export default function Page() {
 
   const openMoveModal = (presetGeneratorId?: string) => {
     if (isReadOnly) {
-      setToast('Estás en modo solo lectura.');
+      setToast(state.me?.rolInvalido ? invalidRoleMessage(state.me.rolInvalido) : 'Estás en modo solo lectura.');
+      void refresh();
       return;
     }
 
@@ -499,7 +518,9 @@ export default function Page() {
             <div className="topbar-heading">
               <div className="user-banner">
                 <span>{state.me?.nombre ?? 'Invitado'}</span>
-                <span className="role">{state.me?.rol === 'editor' ? 'Editor' : 'Solo lectura'}</span>
+                <span className="role" title={state.me?.rolInvalido ? invalidRoleMessage(state.me.rolInvalido) : undefined}>
+                  {state.me?.rolInvalido ? 'Rol no válido' : state.me?.rol === 'editor' ? 'Editor' : 'Solo lectura'}
+                </span>
               </div>
               <div className="topbar-brand">
                 <Image
