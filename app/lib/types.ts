@@ -36,6 +36,8 @@ export interface Movement {
   completado_en?: string;
   resultado?: 'entregado' | 'recogido' | null;
   completado_por?: string | null;
+  entregado_en?: string | null;
+  entregado_por?: string | null;
   editado_en?: string | null;
 }
 

@@ -19,7 +19,16 @@ export function parseCompletionAction(value: unknown): CompletionAction | null {
     : null;
 }
 
-export type CompletionFailure = 'not_found' | 'already_completed';
+export type CompletionFailure = 'not_found' | 'already_completed' | 'already_delivered';
+
+// Entregado deja el movimiento ACTIVO (estado 'pendiente' con resultado 'entregado'); solo Recogido lo completa.
+export function isDelivered(movement: { estado: string; resultado?: string | null }) {
+  return movement.estado === 'pendiente' && movement.resultado === 'entregado';
+}
+
+export function movementStatusLabel(movement: { estado: string; resultado?: string | null }) {
+  return isDelivered(movement) ? 'entregado' : movement.estado;
+}
 
 export function completeMovementWithAction<T extends MovementLike>(
   movements: T[],
@@ -31,18 +40,15 @@ export function completeMovementWithAction<T extends MovementLike>(
   const target = movements.find((movement) => movement.id === id);
   if (!target) return { ok: false, error: 'not_found' };
   if (target.estado !== 'pendiente') return { ok: false, error: 'already_completed' };
-  const completedAt = now.toISOString();
-  const movimiento = {
-    ...target,
-    estado: 'completado',
-    resultado: action,
-    completado_por: completedBy,
-    completado_en: completedAt,
-    editado_en: completedAt,
-  } as T;
+  if (action === 'entregado' && target.resultado === 'entregado') return { ok: false, error: 'already_delivered' };
+  const at = now.toISOString();
+  const movimiento = (
+    action === 'entregado'
+      ? { ...target, resultado: 'entregado', entregado_por: completedBy, entregado_en: at, editado_en: at }
+      : { ...target, estado: 'completado', resultado: 'recogido', completado_por: completedBy, completado_en: at, editado_en: at }
+  ) as T;
   return { ok: true, movimiento, movimientos: movements.map((movement) => (movement.id === id ? movimiento : movement)) };
 }
-
 // La ubicación actual del generador (campo `ubicacion`) pasa a ser el destino (entregado) o el origen (recogido).
 export function applyCompletionLocation<G extends { id: string; ubicacion?: unknown }>(
   generators: G[],

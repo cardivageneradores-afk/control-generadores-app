@@ -28,6 +28,8 @@ export const POST = withStoreErrorHandling(async (request: Request, { params }: 
   if (!result.ok) {
     return result.error === 'not_found'
       ? NextResponse.json({ error: 'Movimiento no encontrado.' }, { status: 404 })
+      : result.error === 'already_delivered'
+        ? NextResponse.json({ error: 'Este movimiento ya estaba entregado; solo queda marcarlo como recogido.' }, { status: 409 })
       : NextResponse.json({ error: 'Este movimiento ya estaba completado.' }, { status: 409 });
   }
 

@@ -1,6 +1,7 @@
 import type { Generator, Movement } from './types';
 import { buildMovementSummary } from './movement-summary.ts';
 import { fixedLocation } from './generator-location.ts';
+import { movementStatusLabel } from './movement-completion.ts';
 
 const TIME_ZONE = 'Europe/Madrid';
 
@@ -109,7 +110,7 @@ function formatMovementText(movement: Movement) {
     ...(movement.editado_en ? ['[MOVIMIENTO EDITADO]'] : []),
     `${movement.origen} → ${movement.destino}`,
     `Recogida: ${formatTime(movement.hora_recogida)} · Entrega: ${formatTime(movement.hora_entrega)}`,
-    `Transporte: ${movement.tipo_transporte} · Estado: ${movement.estado}`,
+    `Transporte: ${movement.tipo_transporte} · Estado: ${movementStatusLabel(movement)}`,
     `Comentarios: ${movement.notas?.trim() || 'Sin comentarios'}`,
   ].join('\n');
 }
@@ -136,7 +137,7 @@ function formatMovementHtml(movement: Movement) {
             ${isEdited ? '<strong aria-label="Movimiento editado" style="color: #9a3412; background-color: #ffedd5; white-space: nowrap;">EDITADO</strong><br>' : ''}
             <span style="color: ${color};">${escapeHtml(movement.tipo_transporte)}</span><br>
             <strong style="color: ${color};">${escapeHtml(`${movement.origen} → ${movement.destino}`)}</strong><br>
-            Recogida: ${escapeHtml(formatTime(movement.hora_recogida))} · Entrega: ${escapeHtml(formatTime(movement.hora_entrega))} · Estado: ${escapeHtml(movement.estado)}<br>
+            Recogida: ${escapeHtml(formatTime(movement.hora_recogida))} · Entrega: ${escapeHtml(formatTime(movement.hora_entrega))} · Estado: ${escapeHtml(movementStatusLabel(movement))}<br>
             Comentarios: <span style="overflow-wrap: break-word; word-break: normal;">${escapeHtml(comment).replace(/\r\n?|\n/g, '<br>')}</span>
           </td>
         </tr>
