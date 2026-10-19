@@ -8,7 +8,7 @@ import { filterMovementsByWeek, getWeekDates } from './lib/calendar-week';
 import PushToggle from './push-toggle';
 import { invalidRoleMessage } from './lib/roles';
 import { DEFAULT_FIXED_LOCATION, fixedLocation } from './lib/generator-location';
-import { isDelivered, type CompletionAction } from './lib/movement-completion';
+import { isDelivered, MAX_COMPLETION_NOTE_LENGTH, type CompletionAction } from './lib/movement-completion';
 
 type Role = 'editor' | 'lector';
 type GeneratorStatus = 'estable' | 'en-oficina' | 'en-transito';
@@ -48,6 +48,8 @@ interface Movement {
   completado_por?: string | null;
   entregado_en?: string | null;
   entregado_por?: string | null;
+  nota_entrega?: string | null;
+  nota_recogida?: string | null;
   editado_en?: string | null;
 }
 
@@ -117,6 +119,9 @@ export default function Page() {
   const [showUsers, setShowUsers] = useState(false);
   const [showRecipients, setShowRecipients] = useState(false);
   const [showMoveModal, setShowMoveModal] = useState(false);
+  const [completing, setCompleting] = useState<{ movement: Movement; accion: CompletionAction } | null>(null);
+  const [completionNote, setCompletionNote] = useState('');
+  const [completionBusy, setCompletionBusy] = useState(false);
   const [showGeneratorModal, setShowGeneratorModal] = useState(false);
   const [editingLocation, setEditingLocation] = useState<{ id: string; codigo: string; ubicacion: string } | null>(null);
   const [editingMovId, setEditingMovId] = useState<string | null>(null);
@@ -300,24 +305,31 @@ export default function Page() {
     }
   };
 
-  const completeMovement = async (movement: Movement, accion: CompletionAction) => {
-    const place = accion === 'entregado' ? movement.destino : movement.origen;
-    const label = accion === 'entregado' ? 'ENTREGADO' : 'RECOGIDO';
-    const note = accion === 'entregado' ? ' El movimiento seguirá activo hasta que se marque Recogido.' : ' El movimiento se completará.';
-    if (!window.confirm(`¿Marcar como ${label}? El generador quedará en: ${place}.${note}`)) return;
+  const completeMovement = (movement: Movement, accion: CompletionAction) => {
+    setCompletionNote('');
+    setCompleting({ movement, accion });
+  };
+
+  const confirmCompletion = async () => {
+    if (!completing || completionBusy) return;
+    const { movement, accion } = completing;
+    setCompletionBusy(true);
     try {
       await api(`/api/movimientos/${encodeURIComponent(movement.id)}/completar`, {
         method: 'POST',
-        body: JSON.stringify({ accion }),
+        body: JSON.stringify({ accion, nota: completionNote }),
       });
       setToast(accion === 'entregado' ? 'Marcado como entregado.' : 'Marcado como recogido.');
+      setCompleting(null);
       await refresh();
     } catch (error) {
       setToast(error instanceof Error ? error.message : 'No se pudo completar.');
+      setCompleting(null);
       await refresh();
+    } finally {
+      setCompletionBusy(false);
     }
   };
-
   const renderCompletionButtons = (movement: Movement) => (
     <span className="completion-actions">
       {!isDelivered(movement) ? (
@@ -858,6 +870,12 @@ export default function Page() {
                           {movement.completado_en ? ` · ${new Date(movement.completado_en).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}
                         </div>
                       ) : null}
+                      {movement.nota_entrega ? (
+                        <div className="completion-meta completion-note">Nota de entrega: {movement.nota_entrega}</div>
+                      ) : null}
+                      {movement.nota_recogida ? (
+                        <div className="completion-meta completion-note">Nota de recogida: {movement.nota_recogida}</div>
+                      ) : null}
                       <div className="movement-details">
                         {details.map(({ label, value }) => (
                           <div key={label} className={`movement-detail${label === 'Notas / comentarios' ? ' comments' : ''}`}>
@@ -871,6 +889,34 @@ export default function Page() {
                 })}
             </div>
           </section>
+        </div>
+      ) : null}
+
+      {completing ? (
+        <div className="modal-overlay" onClick={() => (completionBusy ? null : setCompleting(null))}>
+          <div className="modal" role="dialog" aria-modal="true" aria-label="Confirmar movimiento" onClick={(event) => event.stopPropagation()}>
+            <h3>Marcar como {completing.accion === 'entregado' ? 'ENTREGADO' : 'RECOGIDO'}</h3>
+            <p className="modal-hint">
+              El generador quedará en: <strong>{completing.accion === 'entregado' ? completing.movement.destino : completing.movement.origen}</strong>.
+              {completing.accion === 'entregado' ? ' El movimiento seguirá activo hasta que se marque Recogido.' : ' El movimiento se completará.'}
+            </p>
+            <div className="field">
+              <label htmlFor="completion-note">Indicaciones o incidencias (opcional)</label>
+              <textarea
+                id="completion-note"
+                rows={4}
+                maxLength={MAX_COMPLETION_NOTE_LENGTH}
+                value={completionNote}
+                placeholder="Escribe aquí cualquier indicación o incidencia…"
+                onChange={(e) => setCompletionNote(e.target.value)}
+              />
+              <small>{completionNote.length}/{MAX_COMPLETION_NOTE_LENGTH}</small>
+            </div>
+            <div className="modal-actions">
+              <button className="button ghost" disabled={completionBusy} onClick={() => setCompleting(null)}>Cancelar</button>
+              <button className="button primary" disabled={completionBusy} onClick={confirmCompletion}>Confirmar</button>
+            </div>
+          </div>
         </div>
       ) : null}
 

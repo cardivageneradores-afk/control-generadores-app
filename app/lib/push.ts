@@ -66,11 +66,15 @@ export function buildCompletionPayload(input: {
   destination: string;
   completedBy: string;
   now: Date;
+  note?: string | null;
 }): PushPayload {
   const place = (input.action === 'entregado' ? input.destination : input.origin).trim() || 'ubicación sin indicar';
   return {
     title: `Generador ${input.generatorCode} ${input.action} en ${place}`.slice(0, 120),
-    body: `Marcado por ${input.completedBy} · ${MADRID_FORMAT.format(input.now)}`.slice(0, 200),
+    body: [
+      `Marcado por ${input.completedBy} · ${MADRID_FORMAT.format(input.now)}`,
+      input.note?.trim() ? `Nota: ${input.note.trim().replace(/\s+/g, ' ')}` : '',
+    ].filter(Boolean).join('\n').slice(0, 300),
     url: '/',
     tag: `movimiento-${input.movementId}`,
   };

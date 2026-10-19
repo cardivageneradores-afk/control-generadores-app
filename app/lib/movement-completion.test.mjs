@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { applyCompletionLocation, completeMovementWithAction, isDelivered, movementStatusLabel, parseCompletionAction } from './movement-completion.ts';
+import { applyCompletionLocation, completeMovementWithAction, isDelivered, movementStatusLabel, parseCompletionAction, sanitizeCompletionNote, MAX_COMPLETION_NOTE_LENGTH } from './movement-completion.ts';
 
 const now = new Date('2026-10-16T09:30:00Z');
 const pending = (overrides = {}) => ({ id: 'm1', generador_id: 'g1', origen: 'Oficina', destino: 'Obra Norte', estado: 'pendiente', ...overrides });
@@ -93,4 +93,33 @@ test('permisos: completar abre a lector pero exige sesión; el resto exige edito
   ]) {
     assert.match(read(path), /getEditorFromRequest/, `${path} debe exigir editor`);
   }
+});
+
+test('sanitizeCompletionNote limpia, recorta a 500 y devuelve null si esta vacia', () => {
+  assert.equal(sanitizeCompletionNote('  Puerta  cerrada\u0000  '), 'Puerta cerrada');
+  assert.equal(sanitizeCompletionNote('   '), null);
+  assert.equal(sanitizeCompletionNote(42), null);
+  assert.equal(sanitizeCompletionNote('a'.repeat(900)).length, MAX_COMPLETION_NOTE_LENGTH);
+  assert.equal(sanitizeCompletionNote('<script>x</script>'), '<script>x</script>');
+});
+
+test('cada paso guarda su propia nota y recogido conserva la de entrega', () => {
+  const delivered = completeMovementWithAction([pending()], 'm1', 'entregado', 'Ana', now, 'Sin llave').movimientos;
+  assert.equal(delivered[0].nota_entrega, 'Sin llave');
+  assert.equal(delivered[0].nota_recogida ?? null, null);
+  const done = completeMovementWithAction(delivered, 'm1', 'recogido', 'Luis', now, 'Golpe en carcasa');
+  assert.equal(done.movimiento.nota_entrega, 'Sin llave');
+  assert.equal(done.movimiento.nota_recogida, 'Golpe en carcasa');
+  assert.equal(completeMovementWithAction([pending()], 'm1', 'recogido', 'L', now).movimiento.nota_recogida, null);
+  assert.deepEqual(completeMovementWithAction(delivered, 'm1', 'entregado', 'x', now, 'otra'), { ok: false, error: 'already_delivered' });
+});
+
+test('la ruta sanea la nota, la pasa al push y la migracion añade las columnas', () => {
+  const route = read('movimientos/[id]/completar/route.ts');
+  assert.match(route, /sanitizeCompletionNote\(body\?\.nota\)/);
+  assert.match(route, /note,\s*\n\s*\}\)/);
+  const sql = readFileSync(new URL('../../supabase/migrations/20261019170000_movement_completion_notes.sql', import.meta.url), 'utf8');
+  assert.match(sql, /nota_entrega/);
+  assert.match(sql, /nota_recogida/);
+  assert.doesNotMatch(sql, /alter table[^;]*app_state_revision/i);
 });

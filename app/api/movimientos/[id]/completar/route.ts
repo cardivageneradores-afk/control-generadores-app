@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withStoreErrorHandling } from '@/app/lib/api-errors';
 import { getPublicUserFromRequest } from '@/app/lib/auth';
-import { applyCompletionLocation, completeMovementWithAction, parseCompletionAction } from '@/app/lib/movement-completion';
+import { applyCompletionLocation, completeMovementWithAction, parseCompletionAction, sanitizeCompletionNote } from '@/app/lib/movement-completion';
 import { buildCompletionPayload, selectEditorEmails } from '@/app/lib/push';
 import { notifyEditors } from '@/app/lib/push-store';
 import { getStore, setStore } from '@/app/lib/store';
@@ -22,9 +22,10 @@ export const POST = withStoreErrorHandling(async (request: Request, { params }: 
     return NextResponse.json({ error: 'Indica la acción: entregado o recogido.' }, { status: 400 });
   }
 
+  const note = sanitizeCompletionNote(body?.nota);
   const { id } = await params;
   const state = await getStore();
-  const result = completeMovementWithAction(state.movimientos, id, accion, user.nombre || user.email, new Date());
+  const result = completeMovementWithAction(state.movimientos, id, accion, user.nombre || user.email, new Date(), note);
   if (!result.ok) {
     return result.error === 'not_found'
       ? NextResponse.json({ error: 'Movimiento no encontrado.' }, { status: 404 })
@@ -49,6 +50,7 @@ export const POST = withStoreErrorHandling(async (request: Request, { params }: 
         destination: moved.destino,
         completedBy: user.nombre || user.email,
         now: new Date(),
+        note,
       }),
     );
   } catch {
