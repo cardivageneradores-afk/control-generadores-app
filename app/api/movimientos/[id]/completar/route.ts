@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { withStoreErrorHandling } from '@/app/lib/api-errors';
 import { getPublicUserFromRequest } from '@/app/lib/auth';
 import { completeMovementWithAction, parseCompletionAction } from '@/app/lib/movement-completion';
+import { buildCompletionPayload, selectEditorEmails } from '@/app/lib/push';
+import { notifyEditors } from '@/app/lib/push-store';
 import { getStore, setStore } from '@/app/lib/store';
 
 // Única ruta de movimientos abierta al rol lector (transportistas): solo completar con Entregado/Recogido.
@@ -30,5 +32,25 @@ export const POST = withStoreErrorHandling(async (request: Request, { params }: 
   }
 
   await setStore({ ...state, movimientos: result.movimientos });
+
+  // Notificación push best-effort: nunca bloquea ni hace fallar la acción ya guardada.
+  try {
+    const moved = result.movimiento;
+    const code = state.generadores.find((generator) => generator.id === moved.generador_id)?.codigo ?? '?';
+    await notifyEditors(
+      selectEditorEmails(state.usuarios, user.email),
+      buildCompletionPayload({
+        movementId: moved.id,
+        generatorCode: code,
+        action: accion,
+        origin: moved.origen,
+        destination: moved.destino,
+        completedBy: user.nombre || user.email,
+        now: new Date(),
+      }),
+    );
+  } catch {
+    // ignorado a propósito
+  }
   return NextResponse.json({ ok: true, movimiento: result.movimiento });
 }, 'movimientos');
