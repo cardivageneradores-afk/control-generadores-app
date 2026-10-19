@@ -1,7 +1,7 @@
 "use client";
 
 import Image from 'next/image';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, type KeyboardEvent, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, ChevronLeft, ChevronRight, Copy, LogOut, Mail, Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { buildMovementSummary, getMovementDetailFields } from './lib/movement-summary';
 import { filterMovementsByWeek, getWeekDates } from './lib/calendar-week';
@@ -214,7 +214,7 @@ export default function Page() {
     return () => window.clearTimeout(t);
   }, [toast]);
 
-  const openMoveModal = (presetGeneratorId?: string) => {
+  const openMoveModal = (presetGeneratorId?: string, presetDate?: string) => {
     if (isReadOnly) {
       setToast(state.me?.rolInvalido ? invalidRoleMessage(state.me.rolInvalido) : 'Estás en modo solo lectura.');
       void refresh();
@@ -224,7 +224,7 @@ export default function Page() {
     setEditingMovId(null);
     setMoveForm({
       generadorId: presetGeneratorId ?? state.generadores[0]?.id ?? '',
-      fecha: isoDate(new Date()),
+      fecha: presetDate ?? isoDate(new Date()),
       origen: fixedLocation(state.generadores.find((g) => g.id === (presetGeneratorId ?? state.generadores[0]?.id))),
       destino: '',
       tipoTransporte: 'Propio',
@@ -765,7 +765,22 @@ export default function Page() {
                     return (
                       <div
                         key={`${generator.id}-${iso}`}
-                        className={`calendar-cell ${movements.length ? 'movement' : 'empty-cell'}`}
+                        className={`calendar-cell ${movements.length ? 'movement' : 'empty-cell'}${!movements.length && !isReadOnly ? ' clickable' : ''}`}
+                        {...(!movements.length && !isReadOnly
+                          ? {
+                              role: 'button',
+                              tabIndex: 0,
+                              'aria-label': `Crear movimiento generador ${generator.codigo} el día ${formatDate(iso)}`,
+                              title: 'Crear movimiento',
+                              onClick: () => openMoveModal(generator.id, iso),
+                              onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                  event.preventDefault();
+                                  openMoveModal(generator.id, iso);
+                                }
+                              },
+                            }
+                          : {})}
                       >
                         {movements.length ? (
                           <div className="calendar-movements">
