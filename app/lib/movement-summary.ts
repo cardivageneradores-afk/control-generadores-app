@@ -1,4 +1,5 @@
 import type { Generator, Movement } from './types';
+import { movementStatusLabel } from './movement-completion.ts';
 
 type SummaryField = { label: string; value: string };
 type MovementSummaryOptions = {
@@ -56,7 +57,7 @@ function getSummaryFields(movement: Movement, generator?: Generator): SummaryFie
     details[0],
     { label: 'Destino', value: movement.destino },
     ...details.slice(1),
-    { label: 'Estado', value: movement.estado },
+    { label: 'Estado', value: movementStatusLabel(movement) },
     { label: 'Registrado por', value: movement.usuario || '—' },
     { label: 'Creado', value: formatTimestamp(movement.creado_en) },
     { label: 'Completado', value: formatTimestamp(movement.completado_en) },
@@ -124,7 +125,7 @@ export function buildMovementSummary(
             <td width="15%" style="width: 15%; padding: 5px 7px; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc; color: #475569; font-size: 11px; font-weight: 700;">Transporte</td>
             <td width="35%" style="width: 35%; padding: 5px 7px; border-bottom: 1px solid #e2e8f0; color: #111827; font-size: 12px;">${escapeHtml(movement.tipo_transporte)}</td>
             <td width="15%" style="width: 15%; padding: 5px 7px; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc; color: #475569; font-size: 11px; font-weight: 700;">Estado</td>
-            <td width="35%" style="width: 35%; padding: 5px 7px; border-bottom: 1px solid #e2e8f0; color: #111827; font-size: 12px;">${escapeHtml(movement.estado)}</td>
+            <td width="35%" style="width: 35%; padding: 5px 7px; border-bottom: 1px solid #e2e8f0; color: #111827; font-size: 12px;">${escapeHtml(movementStatusLabel(movement))}</td>
           </tr>
           <tr>
             <td width="15%" style="width: 15%; padding: 5px 7px; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc; color: #475569; font-size: 11px; font-weight: 700;">Registrado por</td>

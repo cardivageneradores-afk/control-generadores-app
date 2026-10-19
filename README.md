@@ -46,14 +46,14 @@ update public.usuarios set rol = 'editor' where lower(email) = 'persona@empresa.
 
 Cada movimiento pendiente tiene dos botones, visibles también para el rol **lector** (transportistas):
 
-- **Entregado**: completa el movimiento y el generador queda en el **destino**.
+- **Entregado**: el generador queda en el **destino**, pero el movimiento **sigue activo** (estado «entregado») hasta que se marque Recogido; se guarda quién y cuándo (entregado_por, entregado_en) y el botón Entregado ya no se puede repetir.
 - **Recogido**: completa el movimiento y el generador queda en el **origen** (de donde salió).
 
 Se pide confirmación antes de guardar (no se puede deshacer desde la app). Se guarda qué acción fue (`resultado`), quién (`completado_por`) y cuándo (`completado_en`), y se muestra en «Actividad reciente». La **ubicación actual** del generador es el campo ubicacion: se muestra en la etiqueta superior derecha de su tarjeta (los editores pueden cambiarla pulsándola; los lectores solo la ven), se usa como origen por defecto al registrar un movimiento, en los días vacíos del calendario y en el correo semanal, y se actualiza sola al completar un movimiento (Entregado = destino, Recogido = origen). Sin valor se usa «Oficina». El calendario muestra la ubicación actual en todos los días sin movimiento (no se guarda histórico del cambio). Los movimientos completados antes de este cambio no mueven el generador.
 
-Permisos: `POST /api/movimientos/[id]/completar` acepta sesión de editor o lector (401 sin sesión, 409 si ya estaba completado, 400 si la acción no es `entregado`/`recogido`) y lee el rol de la base en cada petición. El resto de rutas (crear/editar/borrar movimientos, generadores, destinatarios, usuarios, envío de resumen) siguen exigiendo editor.
+Permisos: `POST /api/movimientos/[id]/completar` acepta sesión de editor o lector (401 sin sesión, 409 si ya estaba completado o entregado, 400 si la acción no es `entregado`/`recogido`) y lee el rol de la base en cada petición. El resto de rutas (crear/editar/borrar movimientos, generadores, destinatarios, usuarios, envío de resumen) siguen exigiendo editor.
 
-**Migración**: aplica `supabase/migrations/20261016120000_movement_completion_result.sql` en el SQL Editor de Supabase (idempotente) antes de usar los botones; sin ella la ubicación no se conserva tras recargar.
+**Migración**: aplica en el SQL Editor, en este orden, `supabase/migrations/20261016120000_movement_completion_result.sql` y después `supabase/migrations/20261019150000_movement_delivered_step.sql` (columnas de entrega; idempotentes). Antes de la segunda, la entrega funciona pero no se conserva quién/cuándo. Detalle de la primera: aplica `supabase/migrations/20261016120000_movement_completion_result.sql` en el SQL Editor de Supabase (idempotente) antes de usar los botones; sin ella la ubicación no se conserva tras recargar.
 
 ## Notificaciones push a editores
 
