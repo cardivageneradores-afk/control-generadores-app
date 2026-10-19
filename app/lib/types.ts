@@ -34,6 +34,8 @@ export interface Movement {
   usuario?: string;
   creado_en?: string;
   completado_en?: string;
+  resultado?: 'entregado' | 'recogido' | null;
+  completado_por?: string | null;
   editado_en?: string | null;
 }
 
