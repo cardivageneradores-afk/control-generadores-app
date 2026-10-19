@@ -1497,3 +1497,14 @@ textarea:focus-visible {
 .pill-button { border: 0; cursor: pointer; font-family: inherit; max-width: 60%; text-align: left; white-space: normal; overflow-wrap: anywhere; }
 .pill-button:hover { filter: brightness(1.15); }
 .pill-button:focus-visible { outline: 2px solid var(--amber, #f5b942); outline-offset: 2px; }
+
+.completion-note {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.modal-hint {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin: 0 0 10px;
+}

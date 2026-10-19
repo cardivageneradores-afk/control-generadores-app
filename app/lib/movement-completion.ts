@@ -10,6 +10,8 @@ interface MovementLike {
   completado_en?: string | null;
   resultado?: string | null;
   completado_por?: string | null;
+  nota_entrega?: string | null;
+  nota_recogida?: string | null;
   editado_en?: string | null;
 }
 
@@ -17,6 +19,22 @@ export function parseCompletionAction(value: unknown): CompletionAction | null {
   return typeof value === 'string' && (COMPLETION_ACTIONS as readonly string[]).includes(value.trim().toLowerCase())
     ? (value.trim().toLowerCase() as CompletionAction)
     : null;
+}
+
+export const MAX_COMPLETION_NOTE_LENGTH = 500;
+
+// Nota opcional del transportista: texto, sin caracteres de control, espacios normalizados y límite de longitud.
+export function sanitizeCompletionNote(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const cleaned = value
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, MAX_COMPLETION_NOTE_LENGTH)
+    .trim();
+  return cleaned || null;
 }
 
 export type CompletionFailure = 'not_found' | 'already_completed' | 'already_delivered';
@@ -36,6 +54,7 @@ export function completeMovementWithAction<T extends MovementLike>(
   action: CompletionAction,
   completedBy: string,
   now: Date,
+  note: string | null = null,
 ): { ok: true; movimientos: T[]; movimiento: T } | { ok: false; error: CompletionFailure } {
   const target = movements.find((movement) => movement.id === id);
   if (!target) return { ok: false, error: 'not_found' };
@@ -44,8 +63,8 @@ export function completeMovementWithAction<T extends MovementLike>(
   const at = now.toISOString();
   const movimiento = (
     action === 'entregado'
-      ? { ...target, resultado: 'entregado', entregado_por: completedBy, entregado_en: at, editado_en: at }
-      : { ...target, estado: 'completado', resultado: 'recogido', completado_por: completedBy, completado_en: at, editado_en: at }
+      ? { ...target, resultado: 'entregado', entregado_por: completedBy,       entregado_en: at, nota_entrega: note, editado_en: at }
+            : { ...target, estado: 'completado', resultado: 'recogido', completado_por: completedBy, completado_en: at, nota_recogida: note, editado_en: at }
   ) as T;
   return { ok: true, movimiento, movimientos: movements.map((movement) => (movement.id === id ? movimiento : movement)) };
 }

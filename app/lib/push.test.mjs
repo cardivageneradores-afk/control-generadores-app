@@ -114,3 +114,11 @@ test('la migración activa RLS y da permisos solo a service_role', () => {
   assert.match(sql, /endpoint text not null unique/);
   assert.doesNotMatch(sql, /app_state_revision|replace_app_state/);
 });
+
+test('el push incluye la nota del transportista y se trunca', () => {
+  const base = { movementId: 'm1', generatorCode: '262', origin: 'A', destination: 'B', completedBy: 'Pepe', now: new Date('2026-10-19T09:30:00Z') };
+  const withNote = buildCompletionPayload({ ...base, action: 'recogido', note: 'Golpe\nen carcasa' });
+  assert.match(withNote.body, /Nota: Golpe en carcasa/);
+  assert.ok(buildCompletionPayload({ ...base, action: 'recogido', note: 'x'.repeat(500) }).body.length <= 300);
+  assert.doesNotMatch(buildCompletionPayload({ ...base, action: 'recogido' }).body, /Nota:/);
+});

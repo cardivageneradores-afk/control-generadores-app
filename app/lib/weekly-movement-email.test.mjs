@@ -336,3 +336,13 @@ test('orders separated detail cards by date and time with matching fixed-width d
     /Completado<\/td>/,
   );
 });
+
+test('el correo muestra las notas de entrega/recogida escapadas', async () => {
+  const { buildWeeklyMovementEmail } = await import('./weekly-movement-email.ts');
+  const mov = { id: 'n1', generador_id: 'g1', fecha: '2026-10-19', origen: 'A', destino: 'B', tipo_transporte: 'Propio', estado: 'completado', notas: '', nota_entrega: '<img src=x onerror=alert(1)>', nota_recogida: 'Todo bien' };
+  const email = buildWeeklyMovementEmail([mov], [{ id: 'g1', codigo: '262', modelo: 'M', ubicacion: 'Oficina', estado: 'estable' }], new Date('2026-10-19T08:00:00Z'));
+  assert.match(email.html, /Nota de entrega: &lt;img/);
+  assert.doesNotMatch(email.html, /<img src=x/);
+  assert.match(email.html, /Nota de recogida: Todo bien/);
+  assert.match(email.text, /Nota de recogida: Todo bien/);
+});

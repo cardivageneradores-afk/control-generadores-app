@@ -61,6 +61,8 @@ function getSummaryFields(movement: Movement, generator?: Generator): SummaryFie
     { label: 'Registrado por', value: movement.usuario || '—' },
     { label: 'Creado', value: formatTimestamp(movement.creado_en) },
     { label: 'Completado', value: formatTimestamp(movement.completado_en) },
+    ...(movement.nota_entrega ? [{ label: 'Nota de entrega', value: movement.nota_entrega }] : []),
+    ...(movement.nota_recogida ? [{ label: 'Nota de recogida', value: movement.nota_recogida }] : []),
   ];
 }
 

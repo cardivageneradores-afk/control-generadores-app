@@ -112,6 +112,8 @@ function formatMovementText(movement: Movement) {
     `Recogida: ${formatTime(movement.hora_recogida)} · Entrega: ${formatTime(movement.hora_entrega)}`,
     `Transporte: ${movement.tipo_transporte} · Estado: ${movementStatusLabel(movement)}`,
     `Comentarios: ${movement.notas?.trim() || 'Sin comentarios'}`,
+    ...(movement.nota_entrega ? [`Nota de entrega: ${movement.nota_entrega}`] : []),
+    ...(movement.nota_recogida ? [`Nota de recogida: ${movement.nota_recogida}`] : []),
   ].join('\n');
 }
 
@@ -119,6 +121,16 @@ function transportColor(type: Movement['tipo_transporte']) {
   if (type === 'Local') return '#9a6700';
   if (type === 'Nacex') return '#6b46c1';
   return '#0f766e';
+}
+
+function completionNotesHtml(movement: Movement) {
+  return [
+    movement.nota_entrega ? `Nota de entrega: ${movement.nota_entrega}` : '',
+    movement.nota_recogida ? `Nota de recogida: ${movement.nota_recogida}` : '',
+  ]
+    .filter(Boolean)
+    .map((line) => `<br><span style="color: #92400e;">${escapeHtml(line).replace(/\r\n?|\n/g, '<br>')}</span>`)
+    .join('');
 }
 
 function formatMovementHtml(movement: Movement) {
@@ -138,7 +150,7 @@ function formatMovementHtml(movement: Movement) {
             <span style="color: ${color};">${escapeHtml(movement.tipo_transporte)}</span><br>
             <strong style="color: ${color};">${escapeHtml(`${movement.origen} → ${movement.destino}`)}</strong><br>
             Recogida: ${escapeHtml(formatTime(movement.hora_recogida))} · Entrega: ${escapeHtml(formatTime(movement.hora_entrega))} · Estado: ${escapeHtml(movementStatusLabel(movement))}<br>
-            Comentarios: <span style="overflow-wrap: break-word; word-break: normal;">${escapeHtml(comment).replace(/\r\n?|\n/g, '<br>')}</span>
+            Comentarios: <span style="overflow-wrap: break-word; word-break: normal;">${escapeHtml(comment)            .replace(/\r\n?|\n/g, '<br>')}</span>${completionNotesHtml(movement)}
           </td>
         </tr>
       </tbody>
