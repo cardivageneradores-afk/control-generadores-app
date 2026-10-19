@@ -6,6 +6,7 @@ import { CheckCircle2, ChevronLeft, ChevronRight, Copy, LogOut, Mail, Pencil, Pl
 import { buildMovementSummary, getMovementDetailFields } from './lib/movement-summary';
 import { filterMovementsByWeek, getWeekDates } from './lib/calendar-week';
 import { invalidRoleMessage } from './lib/roles';
+import { fixedLocation } from './lib/generator-location';
 
 type Role = 'editor' | 'lector';
 type GeneratorStatus = 'estable' | 'en-oficina' | 'en-transito';
@@ -112,6 +113,7 @@ export default function Page() {
   const [showRecipients, setShowRecipients] = useState(false);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showGeneratorModal, setShowGeneratorModal] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<{ id: string; codigo: string; ubicacion: string } | null>(null);
   const [editingMovId, setEditingMovId] = useState<string | null>(null);
   const [moveForm, setMoveForm] = useState({
     generadorId: '',
@@ -218,7 +220,7 @@ export default function Page() {
     setMoveForm({
       generadorId: presetGeneratorId ?? state.generadores[0]?.id ?? '',
       fecha: isoDate(new Date()),
-      origen: (state.generadores.find((g) => g.id === (presetGeneratorId ?? state.generadores[0]?.id))?.ubicacion) ?? '',
+      origen: fixedLocation(state.generadores.find((g) => g.id === (presetGeneratorId ?? state.generadores[0]?.id))),
       destino: '',
       tipoTransporte: 'Propio',
       notas: '',
@@ -335,6 +337,25 @@ export default function Page() {
       await refresh();
     } catch (error) {
       setToast(error instanceof Error ? error.message : 'No se pudo guardar.');
+    }
+  };
+
+  const saveGeneratorLocation = async () => {
+    if (!editingLocation) return;
+    if (!editingLocation.ubicacion.trim()) {
+      setToast('Indica la ubicación fija.');
+      return;
+    }
+    try {
+      await api(`/api/generadores/${encodeURIComponent(editingLocation.id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ubicacion: editingLocation.ubicacion }),
+      });
+      setEditingLocation(null);
+      setToast('Ubicación fija actualizada.');
+      await refresh();
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : 'No se pudo guardar la ubicación.');
     }
   };
 
@@ -609,8 +630,8 @@ export default function Page() {
                         <span className={statusClass(generator.estado)}>{generator.estado === 'estable' ? 'Estable' : generator.estado === 'en-transito' ? 'En tránsito' : 'En oficina'}</span>
                       </div>
                       <div className="location-box">
-                        <small>Ubicación actual</small>
-                        <div>{generator.ubicacion}</div>
+                        <small>Ubicación fija</small>
+                        <div>{fixedLocation(generator)}</div>
                       </div>
                       {related.length ? (
                         <div className="pending-box">
@@ -634,6 +655,9 @@ export default function Page() {
                       {!isReadOnly ? (
                         <div className="generator-actions">
                           <button className="button ghost" onClick={() => openMoveModal(generator.id)}>+ Registrar movimiento</button>
+                          <button className="button ghost" onClick={() => setEditingLocation({ id: generator.id, codigo: generator.codigo, ubicacion: fixedLocation(generator) })}>
+                            <Pencil size={15} /> Ubicación fija
+                          </button>
                           <button className="button danger" onClick={() => deleteGenerator(generator)}>
                             <Trash2 size={15} /> Eliminar
                           </button>
@@ -741,7 +765,7 @@ export default function Page() {
                             })}
                           </div>
                         ) : (
-                          <span className="calendar-location">{generator.ubicacion}</span>
+                          <span className="calendar-location">{fixedLocation(generator)}</span>
                         )}
                       </div>
                     );
@@ -801,8 +825,8 @@ export default function Page() {
               <input value={generatorForm.modelo} onChange={(e) => setGeneratorForm({ ...generatorForm, modelo: e.target.value })} />
             </div>
             <div className="field">
-              <label>Ubicación actual</label>
-              <input value={generatorForm.ubicacion} onChange={(e) => setGeneratorForm({ ...generatorForm, ubicacion: e.target.value })} />
+              <label>Ubicación fija</label>
+              <input value={generatorForm.ubicacion} list="locations-list" placeholder="Oficina" maxLength={60} onChange={(e) => setGeneratorForm({ ...generatorForm, ubicacion: e.target.value })} />
             </div>
             <div className="field">
               <label>Estado</label>
@@ -820,13 +844,37 @@ export default function Page() {
         </div>
       ) : null}
 
+      {editingLocation ? (
+        <div className="modal-overlay" onClick={() => setEditingLocation(null)}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <h3>Ubicación fija · {editingLocation.codigo}</h3>
+            <div className="field">
+              <label>Ubicación fija</label>
+              <input
+                autoFocus
+                value={editingLocation.ubicacion}
+                list="locations-list"
+                placeholder="Oficina"
+                maxLength={60}
+                onChange={(e) => setEditingLocation({ ...editingLocation, ubicacion: e.target.value })}
+                onKeyDown={(e) => { if (e.key === 'Enter') void saveGeneratorLocation(); }}
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="button ghost" onClick={() => setEditingLocation(null)}>Cancelar</button>
+              <button className="button primary" onClick={saveGeneratorLocation}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {showMoveModal ? (
         <div className="modal-overlay" onClick={() => setShowMoveModal(false)}>
           <div className="modal" onClick={(event) => event.stopPropagation()}>
             <h3>{editingMovId ? 'Editar movimiento' : 'Registrar movimiento'}</h3>
             <div className="field">
               <label>Generador</label>
-              <select value={moveForm.generadorId} onChange={(e) => setMoveForm({ ...moveForm, generadorId: e.target.value, origen: state.generadores.find((g) => g.id === e.target.value)?.ubicacion ?? moveForm.origen })}>
+              <select value={moveForm.generadorId} onChange={(e) => setMoveForm({ ...moveForm, generadorId: e.target.value, origen: state.generadores.find((g) => g.id === e.target.value) ? fixedLocation(state.generadores.find((g) => g.id === e.target.value)) : moveForm.origen })}>
                 {state.generadores.map((generator) => (
                   <option key={generator.id} value={generator.id}>{generator.codigo}</option>
                 ))}
