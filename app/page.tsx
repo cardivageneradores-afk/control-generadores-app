@@ -7,6 +7,7 @@ import { buildMovementSummary, getMovementDetailFields } from './lib/movement-su
 import { filterMovementsByWeek, getWeekDates } from './lib/calendar-week';
 import { invalidRoleMessage } from './lib/roles';
 import { fixedLocation } from './lib/generator-location';
+import { currentLocation, type CompletionAction } from './lib/movement-completion';
 
 type Role = 'editor' | 'lector';
 type GeneratorStatus = 'estable' | 'en-oficina' | 'en-transito';
@@ -41,6 +42,9 @@ interface Movement {
   hora_entrega?: string;
   estado: MovementStatus;
   usuario?: string;
+  completado_en?: string;
+  resultado?: 'entregado' | 'recogido' | null;
+  completado_por?: string | null;
   editado_en?: string | null;
 }
 
@@ -295,15 +299,33 @@ export default function Page() {
     }
   };
 
-  const completeMovement = async (movementId: string) => {
+  const completeMovement = async (movement: Movement, accion: CompletionAction) => {
+    const place = accion === 'entregado' ? movement.destino : movement.origen;
+    const label = accion === 'entregado' ? 'ENTREGADO' : 'RECOGIDO';
+    if (!window.confirm(`¿Marcar como ${label}? El generador quedará en: ${place}.`)) return;
     try {
-      await api(`/api/movimientos/${movementId}/completar`, { method: 'POST' });
-      setToast('Movimiento completado.');
+      await api(`/api/movimientos/${encodeURIComponent(movement.id)}/completar`, {
+        method: 'POST',
+        body: JSON.stringify({ accion }),
+      });
+      setToast(accion === 'entregado' ? 'Marcado como entregado.' : 'Marcado como recogido.');
       await refresh();
     } catch (error) {
       setToast(error instanceof Error ? error.message : 'No se pudo completar.');
+      await refresh();
     }
   };
+
+  const renderCompletionButtons = (movement: Movement) => (
+    <span className="completion-actions">
+      <button className="mini-button primary" onClick={() => completeMovement(movement, 'entregado')} title="Entregado: el generador queda en el destino">
+        <CheckCircle2 size={12} /> Entregado
+      </button>
+      <button className="mini-button primary" onClick={() => completeMovement(movement, 'recogido')} title="Recogido: el generador queda en el origen">
+        <CheckCircle2 size={12} /> Recogido
+      </button>
+    </span>
+  );
 
   const deleteMovement = async () => {
     if (!editingMovId) return;
@@ -630,8 +652,11 @@ export default function Page() {
                         <span className={statusClass(generator.estado)}>{generator.estado === 'estable' ? 'Estable' : generator.estado === 'en-transito' ? 'En tránsito' : 'En oficina'}</span>
                       </div>
                       <div className="location-box">
-                        <small>Ubicación fija</small>
-                        <div>{fixedLocation(generator)}</div>
+                        <small>Ubicación actual</small>
+                        <div>{currentLocation(generator, state.movimientos, fixedLocation(generator))}</div>
+                        {currentLocation(generator, state.movimientos, fixedLocation(generator)) !== fixedLocation(generator) ? (
+                          <small>Ubicación fija: {fixedLocation(generator)}</small>
+                        ) : null}
                       </div>
                       {related.length ? (
                         <div className="pending-box">
@@ -642,11 +667,9 @@ export default function Page() {
                               <div className="pending-meta">
                                 <span>{formatDate(movement.fecha)}</span>
                                 {!isReadOnly ? (
-                                  <>
-                                    <button className="mini-button" onClick={() => openEditMovement(movement.id)}><Pencil size={12} /></button>
-                                    <button className="mini-button primary" onClick={() => completeMovement(movement.id)}><CheckCircle2 size={12} /></button>
-                                  </>
+                                  <button className="mini-button" onClick={() => openEditMovement(movement.id)}><Pencil size={12} /></button>
                                 ) : null}
+                                {state.me ? renderCompletionButtons(movement) : null}
                               </div>
                             </div>
                           ))}
@@ -765,7 +788,7 @@ export default function Page() {
                             })}
                           </div>
                         ) : (
-                          <span className="calendar-location">{fixedLocation(generator)}</span>
+                          <span className="calendar-location">{currentLocation(generator, state.movimientos, fixedLocation(generator))}</span>
                         )}
                       </div>
                     );
@@ -791,11 +814,22 @@ export default function Page() {
                         <span className="date-pill">{formatDate(movement.fecha)}</span>
                         <span className="code-pill">{generator?.codigo ?? '—'}</span>
                         <span className="route-pill">{movement.origen} → {movement.destino}</span>
-                        <span className={`state-pill ${movement.estado === 'completado' ? 'done' : 'pending'}`}>{movement.estado === 'completado' ? 'Completado' : 'Pendiente'}</span>
+                        <span className={`state-pill ${movement.estado === 'completado' ? 'done' : 'pending'}`}>
+                          {movement.estado === 'completado'
+                            ? movement.resultado === 'entregado' ? 'Entregado' : movement.resultado === 'recogido' ? 'Recogido' : 'Completado'
+                            : 'Pendiente'}
+                        </span>
                         {!isReadOnly && movement.estado === 'pendiente' ? (
                           <button className="mini-button" onClick={() => openEditMovement(movement.id)}><Pencil size={12} /></button>
                         ) : null}
+                        {state.me && movement.estado === 'pendiente' ? renderCompletionButtons(movement) : null}
                       </div>
+                      {movement.estado === 'completado' && movement.completado_por ? (
+                        <div className="completion-meta">
+                          {movement.resultado === 'recogido' ? 'Recogido' : movement.resultado === 'entregado' ? 'Entregado' : 'Completado'} por {movement.completado_por}
+                          {movement.completado_en ? ` · ${new Date(movement.completado_en).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}
+                        </div>
+                      ) : null}
                       <div className="movement-details">
                         {details.map(({ label, value }) => (
                           <div key={label} className={`movement-detail${label === 'Notas / comentarios' ? ' comments' : ''}`}>

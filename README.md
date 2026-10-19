@@ -42,6 +42,19 @@ update public.usuarios set rol = 'editor' where lower(email) = 'persona@empresa.
 - La cookie de sesión solo guarda el identificador del usuario; el rol efectivo se lee de la base de datos en **cada petición**, así que un cambio de rol se aplica de inmediato sin cerrar sesión. La pantalla abierta se actualiza al volver a la pestaña (o al recargar).
 - La app tolera mayúsculas/espacios (`Editor`), pero un rol desconocido se trata como solo lectura y se avisa en pantalla («Rol no válido»). Al crear usuarios desde la API, un rol inválido devuelve error 400.
 
+## Entregado / Recogido (transportistas)
+
+Cada movimiento pendiente tiene dos botones, visibles también para el rol **lector** (transportistas):
+
+- **Entregado**: completa el movimiento y el generador queda en el **destino**.
+- **Recogido**: completa el movimiento y el generador queda en el **origen** (de donde salió).
+
+Se pide confirmación antes de guardar (no se puede deshacer desde la app). Se guarda qué acción fue (`resultado`), quién (`completado_por`) y cuándo (`completado_en`), y se muestra en «Actividad reciente». La «Ubicación actual» del generador (calendario y tarjeta) es la del último movimiento completado con resultado; sin ninguno, la «Ubicación fija». Los movimientos completados antes de este cambio no tienen resultado y no mueven el generador.
+
+Permisos: `POST /api/movimientos/[id]/completar` acepta sesión de editor o lector (401 sin sesión, 409 si ya estaba completado, 400 si la acción no es `entregado`/`recogido`) y lee el rol de la base en cada petición. El resto de rutas (crear/editar/borrar movimientos, generadores, destinatarios, usuarios, envío de resumen) siguen exigiendo editor.
+
+**Migración**: aplica `supabase/migrations/20261016120000_movement_completion_result.sql` en el SQL Editor de Supabase (idempotente) antes de usar los botones; sin ella la ubicación no se conserva tras recargar.
+
 ## Copias de seguridad y restauración
 
 Antes de cualquier cambio de esquema o despliegue importante, confirma en **Supabase Dashboard > Database > Backups** qué copias automáticas y retención están disponibles para el plan del proyecto. La disponibilidad de PITR, su ventana de retención y los tiempos de recuperación dependen del plan; compruébalos en el dashboard y no des por hecho que están habilitados.

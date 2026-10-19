@@ -1456,3 +1456,27 @@ textarea:focus-visible {
     background: #19222c;
   }
 }
+
+.completion-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.completion-actions .mini-button {
+  gap: 4px;
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pending-meta {
+  flex-wrap: wrap;
+}
+
+.completion-meta {
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 2px 0 0;
+}
