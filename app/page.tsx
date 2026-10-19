@@ -5,6 +5,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, ChevronLeft, ChevronRight, Copy, LogOut, Mail, Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { buildMovementSummary, getMovementDetailFields } from './lib/movement-summary';
 import { filterMovementsByWeek, getWeekDates } from './lib/calendar-week';
+import PushToggle from './push-toggle';
 import { invalidRoleMessage } from './lib/roles';
 import { fixedLocation } from './lib/generator-location';
 import { currentLocation, type CompletionAction } from './lib/movement-completion';
@@ -588,6 +589,7 @@ export default function Page() {
               </button>
               {!isReadOnly ? (
                 <>
+                  <PushToggle onMessage={setToast} />
                   <button className="button ghost compact-action" onClick={() => setShowGeneratorModal(true)}>
                     <Plus size={13} /> Generador
                   </button>

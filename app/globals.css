@@ -1480,3 +1480,4 @@ textarea:focus-visible {
   font-size: 12px;
   padding: 2px 0 0;
 }
+.push-help { flex-basis: 100%; max-width: 360px; color: var(--muted, #9aa4b5); font-size: 12px; line-height: 1.4; }

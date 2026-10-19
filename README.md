@@ -55,6 +55,16 @@ Permisos: `POST /api/movimientos/[id]/completar` acepta sesión de editor o lect
 
 **Migración**: aplica `supabase/migrations/20261016120000_movement_completion_result.sql` en el SQL Editor de Supabase (idempotente) antes de usar los botones; sin ella la ubicación no se conserva tras recargar.
 
+## Notificaciones push a editores
+
+Al marcar un movimiento como **Entregado** o **Recogido**, el servidor envía una notificación push a todos los editores suscritos (menos a quien lo marcó): «Generador 262 entregado en Clínica Corachan», con fecha/hora y quién lo marcó. El envío es *best-effort* (timeout de 5 s): si falla no afecta a la acción, y las suscripciones caducadas (404/410) se eliminan solas.
+
+1. Genera las claves VAPID **una vez** en tu ordenador: `npx web-push generate-vapid-keys`. No las subas al repositorio.
+2. En Vercel → Settings → Environment Variables añade: `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (clave pública; también `VAPID_PUBLIC_KEY` con el mismo valor), `VAPID_PRIVATE_KEY` (clave privada) y `VAPID_SUBJECT` (`mailto:cardiva.generadores@gmail.com`). Haz un nuevo deploy (la clave pública se incorpora en el build).
+3. Aplica en el SQL Editor de Supabase `supabase/migrations/20261019120000_push_subscriptions.sql` (idempotente; tabla `push_subscriptions` con RLS y permisos solo para `service_role`).
+4. Cada editor pulsa **Activar notificaciones** en su dispositivo y acepta el permiso. En **iPhone** (iOS 16.4 o superior) primero hay que abrir la web en Safari, Compartir → «Añadir a pantalla de inicio», abrir la app desde el icono y entonces activarlas.
+
+Sin las variables VAPID la función queda desactivada sin errores (el botón no aparece). Solo el rol editor puede suscribirse; el rol se lee de la base en cada petición.
 ## Copias de seguridad y restauración
 
 Antes de cualquier cambio de esquema o despliegue importante, confirma en **Supabase Dashboard > Database > Backups** qué copias automáticas y retención están disponibles para el plan del proyecto. La disponibilidad de PITR, su ventana de retención y los tiempos de recuperación dependen del plan; compruébalos en el dashboard y no des por hecho que están habilitados.
