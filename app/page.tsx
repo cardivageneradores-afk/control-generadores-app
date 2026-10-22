@@ -153,6 +153,7 @@ export default function Page() {
   const [weekOffset, setWeekOffset] = useState(0);
   const weekDates = getWeekDates(new Date(), weekOffset);
   const visibleWeekStart = isoDate(weekDates[0]);
+  const todayLocation = (generator: Generator) => locationOnDate(generator, state.movimientos, isoDate(new Date()));
 
   const pendingMovements = useMemo(
     () =>
@@ -667,16 +668,16 @@ export default function Page() {
                           <div className="generator-model">{generator.modelo}</div>
                         </div>
                         {isReadOnly ? (
-                          <span className={locationPillClass(fixedLocation(generator))}>{fixedLocation(generator)}</span>
+                          <span className={locationPillClass(todayLocation(generator))}>{todayLocation(generator)}</span>
                         ) : (
                           <button
                             type="button"
-                            className={`${locationPillClass(fixedLocation(generator))} pill-button`}
-                            aria-label={`Ubicación actual de ${generator.codigo}: ${fixedLocation(generator)}. Pulsa para cambiarla`}
+                            className={`${locationPillClass(todayLocation(generator))} pill-button`}
+                            aria-label={`Ubicación actual de ${generator.codigo}: ${todayLocation(generator)}. Pulsa para cambiarla`}
                             title="Cambiar ubicación actual"
-                            onClick={() => setEditingLocation({ id: generator.id, codigo: generator.codigo, ubicacion: fixedLocation(generator) })}
+                            onClick={() => setEditingLocation({ id: generator.id, codigo: generator.codigo, ubicacion: todayLocation(generator) })}
                           >
-                            {fixedLocation(generator)}
+                            {todayLocation(generator)}
                           </button>
                         )}
                       </div>

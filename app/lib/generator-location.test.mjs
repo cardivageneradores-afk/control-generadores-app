@@ -71,3 +71,10 @@ test('el correo semanal muestra la ubicación según el historial del día', () 
   assert.match(cell('2026-10-29'), /Ubicación: Mutua Terrassa/);
   assert.match(cell('2026-10-31'), /Ubicación: Oficina/);
 });
+test('locationOnDate: hoy, un movimiento entregado el mismo día ya cuenta y uno pendiente no', () => {
+  const generator = { id: 'g1', ubicacion: 'Mutua' };
+  const base = { id: 'a', generador_id: 'g1', fecha: '2026-10-22', origen: 'Oficina', destino: 'Mutua', estado: 'pendiente' };
+  assert.equal(locationOnDate(generator, [base], '2026-10-22'), 'Mutua');
+  assert.equal(locationOnDate({ ...generator, ubicacion: 'Oficina' }, [base], '2026-10-22'), 'Oficina');
+  assert.equal(locationOnDate(generator, [{ ...base, resultado: 'entregado' }], '2026-10-22'), 'Mutua');
+});
