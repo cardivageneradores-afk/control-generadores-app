@@ -7,7 +7,7 @@ import { buildMovementSummary, getMovementDetailFields } from './lib/movement-su
 import { filterMovementsByWeek, getWeekDates } from './lib/calendar-week';
 import PushToggle from './push-toggle';
 import { invalidRoleMessage } from './lib/roles';
-import { DEFAULT_FIXED_LOCATION, fixedLocation } from './lib/generator-location';
+import { DEFAULT_FIXED_LOCATION, fixedLocation, locationOnDate } from './lib/generator-location';
 import { isDelivered, MAX_COMPLETION_NOTE_LENGTH, type CompletionAction } from './lib/movement-completion';
 
 type Role = 'editor' | 'lector';
@@ -153,6 +153,7 @@ export default function Page() {
   const [weekOffset, setWeekOffset] = useState(0);
   const weekDates = getWeekDates(new Date(), weekOffset);
   const visibleWeekStart = isoDate(weekDates[0]);
+  const todayLocation = (generator: Generator) => locationOnDate(generator, state.movimientos, isoDate(new Date()));
 
   const pendingMovements = useMemo(
     () =>
@@ -667,16 +668,16 @@ export default function Page() {
                           <div className="generator-model">{generator.modelo}</div>
                         </div>
                         {isReadOnly ? (
-                          <span className={locationPillClass(fixedLocation(generator))}>{fixedLocation(generator)}</span>
+                          <span className={locationPillClass(todayLocation(generator))}>{todayLocation(generator)}</span>
                         ) : (
                           <button
                             type="button"
-                            className={`${locationPillClass(fixedLocation(generator))} pill-button`}
-                            aria-label={`Ubicación actual de ${generator.codigo}: ${fixedLocation(generator)}. Pulsa para cambiarla`}
+                            className={`${locationPillClass(todayLocation(generator))} pill-button`}
+                            aria-label={`Ubicación actual de ${generator.codigo}: ${todayLocation(generator)}. Pulsa para cambiarla`}
                             title="Cambiar ubicación actual"
-                            onClick={() => setEditingLocation({ id: generator.id, codigo: generator.codigo, ubicacion: fixedLocation(generator) })}
+                            onClick={() => setEditingLocation({ id: generator.id, codigo: generator.codigo, ubicacion: todayLocation(generator) })}
                           >
-                            {fixedLocation(generator)}
+                            {todayLocation(generator)}
                           </button>
                         )}
                       </div>
@@ -822,7 +823,7 @@ export default function Page() {
                             })}
                           </div>
                         ) : (
-                          <span className="calendar-location">{fixedLocation(generator)}</span>
+                          <span className="calendar-location">{locationOnDate(generator, state.movimientos, iso)}</span>
                         )}
                       </div>
                     );
