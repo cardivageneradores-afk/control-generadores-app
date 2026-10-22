@@ -7,7 +7,7 @@ import { buildMovementSummary, getMovementDetailFields } from './lib/movement-su
 import { filterMovementsByWeek, getWeekDates } from './lib/calendar-week';
 import PushToggle from './push-toggle';
 import { invalidRoleMessage } from './lib/roles';
-import { DEFAULT_FIXED_LOCATION, fixedLocation } from './lib/generator-location';
+import { DEFAULT_FIXED_LOCATION, fixedLocation, locationOnDate } from './lib/generator-location';
 import { isDelivered, MAX_COMPLETION_NOTE_LENGTH, type CompletionAction } from './lib/movement-completion';
 
 type Role = 'editor' | 'lector';
@@ -822,7 +822,7 @@ export default function Page() {
                             })}
                           </div>
                         ) : (
-                          <span className="calendar-location">{fixedLocation(generator)}</span>
+                          <span className="calendar-location">{locationOnDate(generator, state.movimientos, iso)}</span>
                         )}
                       </div>
                     );

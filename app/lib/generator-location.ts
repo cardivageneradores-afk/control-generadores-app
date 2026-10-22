@@ -11,3 +11,40 @@ export function normalizeLocation(value: unknown): string {
 export function fixedLocation(generator: { ubicacion?: unknown } | null | undefined): string {
   return normalizeLocation(generator?.ubicacion);
 }
+
+interface TimelineMovement {
+  id: string;
+  generador_id: string;
+  fecha: string;
+  origen: string;
+  destino: string;
+  estado: string;
+  resultado?: string | null;
+  hora_recogida?: string;
+}
+
+function compareMovements(a: TimelineMovement, b: TimelineMovement) {
+  return a.fecha.localeCompare(b.fecha)
+    || (a.hora_recogida ?? '').localeCompare(b.hora_recogida ?? '')
+    || a.id.localeCompare(b.id);
+}
+
+// Ubicación del generador en un día sin movimientos (fecha AAAA-MM-DD), según su historial:
+// tras un movimiento está en el destino (o en el origen si se marcó «Recogido»), hasta el siguiente;
+// antes del primer movimiento está en su origen. Sin movimientos (o tras uno ya completado) manda la ubicación actual.
+export function locationOnDate(
+  generator: { id: string; ubicacion?: unknown },
+  movements: TimelineMovement[],
+  date: string,
+): string {
+  const own = movements.filter((movement) => movement.generador_id === generator.id).sort(compareMovements);
+  const previousIndex = own.reduce((found, movement, index) => (movement.fecha < date ? index : found), -1);
+  if (previousIndex >= 0) {
+    const previous = own[previousIndex];
+    const isLast = previousIndex === own.length - 1;
+    if (isLast && previous.estado === 'completado') return fixedLocation(generator);
+    return normalizeLocation(previous.resultado === 'recogido' ? previous.origen : previous.destino);
+  }
+  const next = own.find((movement) => movement.fecha > date);
+  return next ? normalizeLocation(next.origen) : fixedLocation(generator);
+}
