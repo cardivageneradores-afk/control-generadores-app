@@ -40,11 +40,13 @@ test('locationOnDate: en el centro desde la entrega hasta la devolución, no ant
   assert.equal(locationOnDate(generator, movements, '2026-10-31'), 'Oficina');
 });
 
-test('locationOnDate: antes del primer movimiento usa su origen y sin movimientos la ubicación actual', () => {
+test('locationOnDate: antes del primer movimiento pendiente manda la ubicación actual y sin movimientos la ubicación actual', () => {
   const generator = { id: 'g1', ubicacion: 'Taller' };
   assert.equal(locationOnDate(generator, [], '2026-10-29'), 'Taller');
   const later = [{ id: 'a', generador_id: 'g1', fecha: '2026-11-05', origen: 'Puerto', destino: 'Clínica', estado: 'pendiente' }];
-  assert.equal(locationOnDate(generator, later, '2026-10-29'), 'Puerto');
+  assert.equal(locationOnDate(generator, later, '2026-10-29'), 'Taller');
+  const started = [{ ...later[0], resultado: 'entregado' }];
+  assert.equal(locationOnDate(generator, started, '2026-10-29'), 'Puerto');
   assert.equal(locationOnDate(generator, later, '2026-11-06'), 'Clínica');
 });
 
