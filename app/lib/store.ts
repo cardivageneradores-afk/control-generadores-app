@@ -135,6 +135,8 @@ export async function setStore(next: AppState): Promise<AppState> {
           completado_en: movement.completado_en ?? null,
           resultado: movement.resultado ?? null,
           completado_por: movement.completado_por ?? null,
+          recogido_en: movement.recogido_en ?? null,
+          recogido_por: movement.recogido_por ?? null,
           entregado_en: movement.entregado_en ?? null,
           entregado_por: movement.entregado_por ?? null,
           nota_entrega: movement.nota_entrega ?? null,
