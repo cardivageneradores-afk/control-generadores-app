@@ -1,6 +1,6 @@
 import type { Generator, Movement } from './types';
 import { buildMovementSummary } from './movement-summary.ts';
-import { fixedLocation } from './generator-location.ts';
+import { locationOnDate } from './generator-location.ts';
 import { movementStatusLabel } from './movement-completion.ts';
 
 const TIME_ZONE = 'Europe/Madrid';
@@ -220,7 +220,7 @@ export function buildWeeklyMovementEmail(
       const cellMovements = movementsByGeneratorAndDate.get(generator.id)?.get(day.date) ?? [];
       const content = cellMovements.length
         ? cellMovements.map((movement) => formatMovementText(movement)).join('\n\n')
-        : `Ubicación: ${fixedLocation(generator)}`;
+        : `Ubicación: ${locationOnDate(generator, movements, day.date)}`;
       return `  ${day.label}:\n${content}`;
     });
     return `Generador ${title}\n${cells.join('\n')}`;
@@ -249,7 +249,7 @@ export function buildWeeklyMovementEmail(
       const cellMovements = movementsByGeneratorAndDate.get(generator.id)?.get(day.date) ?? [];
       const content = cellMovements.length
         ? cellMovements.map((movement) => formatMovementHtml(movement)).join('')
-        : `<span style="font-size: 12px; color: #4b5563;">Ubicación: ${escapeHtml(fixedLocation(generator))}</span>`;
+        : `<span style="font-size: 12px; color: #4b5563;">Ubicación: ${escapeHtml(locationOnDate(generator, movements, day.date))}</span>`;
       return `
         <td data-calendar-cell="${escapeHtml(`${generator.id}:${day.date}`)}" width="12.85%" style="width: 12.85%; padding: 4px; border: 1px solid #dbe3ee; vertical-align: top; font-family: Arial, sans-serif; color: #374151; font-size: 12px; line-height: 1.4; word-break: normal; overflow-wrap: break-word;">
           ${content}
