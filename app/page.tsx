@@ -8,7 +8,7 @@ import { filterMovementsByWeek, getWeekDates } from './lib/calendar-week';
 import PushToggle from './push-toggle';
 import { invalidRoleMessage } from './lib/roles';
 import { DEFAULT_FIXED_LOCATION, fixedLocation, locationOnDate } from './lib/generator-location';
-import { isDelivered, MAX_COMPLETION_NOTE_LENGTH, type CompletionAction } from './lib/movement-completion';
+import { isDelivered, isPickedUp, MAX_COMPLETION_NOTE_LENGTH, type CompletionAction } from './lib/movement-completion';
 
 type Role = 'editor' | 'lector';
 type GeneratorStatus = 'estable' | 'en-oficina' | 'en-transito';
@@ -46,6 +46,8 @@ interface Movement {
   completado_en?: string;
   resultado?: 'entregado' | 'recogido' | null;
   completado_por?: string | null;
+  recogido_en?: string | null;
+  recogido_por?: string | null;
   entregado_en?: string | null;
   entregado_por?: string | null;
   nota_entrega?: string | null;
@@ -333,14 +335,16 @@ export default function Page() {
   };
   const renderCompletionButtons = (movement: Movement) => (
     <span className="completion-actions">
-      {!isDelivered(movement) ? (
-        <button className="mini-button primary" onClick={() => completeMovement(movement, 'entregado')} title="Entregado: el generador queda en el destino; el movimiento sigue activo hasta Recogido">
+      {movement.resultado !== 'recogido' && movement.resultado !== 'entregado' ? (
+        <button className="mini-button primary" onClick={() => completeMovement(movement, 'recogido')} title="Recogido: el transportista ha recogido el generador en el origen; el movimiento sigue activo hasta Entregado">
+          <CheckCircle2 size={12} /> Recogido
+        </button>
+      ) : null}
+      {movement.resultado === 'recogido' || movement.resultado === 'entregado' ? (
+        <button className="mini-button primary" onClick={() => completeMovement(movement, 'entregado')} title="Entregado: el generador queda en el destino y el movimiento se cierra">
           <CheckCircle2 size={12} /> Entregado
         </button>
       ) : null}
-      <button className="mini-button primary" onClick={() => completeMovement(movement, 'recogido')} title="Recogido: el generador queda en el origen">
-        <CheckCircle2 size={12} /> Recogido
-      </button>
     </span>
   );
 
@@ -807,7 +811,7 @@ export default function Page() {
                                   <div className="calendar-movement-header">
                                     <span>{movement.tipo_transporte}</span>
                                     <span className={`calendar-movement-status ${movement.estado === 'completado' ? 'done' : 'pending'}`}>
-                                      {movement.estado === 'completado' ? 'Completado' : isDelivered(movement) ? 'Entregado' : 'Pendiente'}
+                                      {movement.estado === 'completado' ? 'Completado' : isDelivered(movement) ? 'Entregado' : isPickedUp(movement) ? 'Recogido' : 'Pendiente'}
                                     </span>
                                   </div>
                                   <div className="calendar-route">{movement.origen} → {movement.destino}</div>
@@ -852,20 +856,26 @@ export default function Page() {
                         <span className={`state-pill ${movement.estado === 'completado' ? 'done' : 'pending'}`}>
                           {movement.estado === 'completado'
                             ? movement.resultado === 'entregado' ? 'Entregado' : movement.resultado === 'recogido' ? 'Recogido' : 'Completado'
-                            : isDelivered(movement) ? 'Entregado' : 'Pendiente'}
+                            : isDelivered(movement) ? 'Entregado' : isPickedUp(movement) ? 'Recogido' : 'Pendiente'}
                         </span>
                         {!isReadOnly && movement.estado === 'pendiente' ? (
                           <button className="mini-button" onClick={() => openEditMovement(movement.id)}><Pencil size={12} /></button>
                         ) : null}
                         {state.me && movement.estado === 'pendiente' ? renderCompletionButtons(movement) : null}
                       </div>
+                      {movement.recogido_por ? (
+                        <div className="completion-meta">
+                          Recogido por {movement.recogido_por}
+                          {movement.recogido_en ? ` · ${new Date(movement.recogido_en).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}
+                        </div>
+                      ) : null}
                       {movement.entregado_por ? (
                         <div className="completion-meta">
                           Entregado por {movement.entregado_por}
                           {movement.entregado_en ? ` · ${new Date(movement.entregado_en).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}
                         </div>
                       ) : null}
-                      {movement.estado === 'completado' && movement.completado_por ? (
+                      {movement.estado === 'completado' && movement.completado_por && !movement.entregado_por ? (
                         <div className="completion-meta">
                           {movement.resultado === 'recogido' ? 'Recogido' : movement.resultado === 'entregado' ? 'Entregado' : 'Completado'} por {movement.completado_por}
                           {movement.completado_en ? ` · ${new Date(movement.completado_en).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}
@@ -898,8 +908,8 @@ export default function Page() {
           <div className="modal" role="dialog" aria-modal="true" aria-label="Confirmar movimiento" onClick={(event) => event.stopPropagation()}>
             <h3>Marcar como {completing.accion === 'entregado' ? 'ENTREGADO' : 'RECOGIDO'}</h3>
             <p className="modal-hint">
-              El generador quedará en: <strong>{completing.accion === 'entregado' ? completing.movement.destino : completing.movement.origen}</strong>.
-              {completing.accion === 'entregado' ? ' El movimiento seguirá activo hasta que se marque Recogido.' : ' El movimiento se completará.'}
+              El generador {completing.accion === 'entregado' ? 'quedará en' : 'sigue en'}: <strong>{completing.accion === 'entregado' ? completing.movement.destino : completing.movement.origen}</strong>.
+                            {completing.accion === 'entregado' ? ' El movimiento se completará.' : ' El movimiento seguirá activo hasta que se marque Entregado.'}
             </p>
             <div className="field">
               <label htmlFor="completion-note">Indicaciones o incidencias (opcional)</label>

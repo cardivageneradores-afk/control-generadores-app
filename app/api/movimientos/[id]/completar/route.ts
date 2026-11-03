@@ -29,8 +29,12 @@ export const POST = withStoreErrorHandling(async (request: Request, { params }: 
   if (!result.ok) {
     return result.error === 'not_found'
       ? NextResponse.json({ error: 'Movimiento no encontrado.' }, { status: 404 })
+      : result.error === 'already_picked_up'
+        ? NextResponse.json({ error: 'Este movimiento ya estaba recogido; solo queda marcarlo como entregado.' }, { status: 409 })
       : result.error === 'already_delivered'
-        ? NextResponse.json({ error: 'Este movimiento ya estaba entregado; solo queda marcarlo como recogido.' }, { status: 409 })
+        ? NextResponse.json({ error: 'Este movimiento ya estaba entregado; solo queda cerrarlo con Entregado.' }, { status: 409 })
+      : result.error === 'not_picked_up'
+        ? NextResponse.json({ error: 'Primero hay que marcar el movimiento como recogido.' }, { status: 409 })
       : NextResponse.json({ error: 'Este movimiento ya estaba completado.' }, { status: 409 });
   }
 

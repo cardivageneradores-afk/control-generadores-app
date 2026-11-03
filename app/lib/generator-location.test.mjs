@@ -78,3 +78,10 @@ test('locationOnDate: hoy, un movimiento entregado el mismo día ya cuenta y uno
   assert.equal(locationOnDate({ ...generator, ubicacion: 'Oficina' }, [base], '2026-10-22'), 'Oficina');
   assert.equal(locationOnDate(generator, [{ ...base, resultado: 'entregado' }], '2026-10-22'), 'Mutua');
 });
+
+test('locationOnDate: recogido (en transito) sigue en el origen y entregado deja el destino', () => {
+  const generator = { id: 'g1', ubicacion: 'Oficina' };
+  const base = { id: 'a', generador_id: 'g1', fecha: '2026-10-28', origen: 'Oficina', destino: 'Mutua', estado: 'pendiente' };
+  assert.equal(locationOnDate(generator, [{ ...base, resultado: 'recogido' }], '2026-10-29'), 'Oficina');
+  assert.equal(locationOnDate({ ...generator, ubicacion: 'Mutua' }, [{ ...base, estado: 'completado', resultado: 'entregado' }], '2026-10-29'), 'Mutua');
+});

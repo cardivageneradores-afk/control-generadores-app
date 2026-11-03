@@ -10,6 +10,8 @@ interface MovementLike {
   completado_en?: string | null;
   resultado?: string | null;
   completado_por?: string | null;
+  recogido_en?: string | null;
+  recogido_por?: string | null;
   nota_entrega?: string | null;
   nota_recogida?: string | null;
   editado_en?: string | null;
@@ -37,15 +39,20 @@ export function sanitizeCompletionNote(value: unknown): string | null {
   return cleaned || null;
 }
 
-export type CompletionFailure = 'not_found' | 'already_completed' | 'already_delivered';
+export type CompletionFailure = 'not_found' | 'already_completed' | 'already_picked_up' | 'not_picked_up' | 'already_delivered';
 
-// Entregado deja el movimiento ACTIVO (estado 'pendiente' con resultado 'entregado'); solo Recogido lo completa.
+// Flujo: primero Recogido (estado 'pendiente', resultado 'recogido') y después Entregado, que cierra el movimiento.
+// Compatibilidad: un movimiento antiguo 'pendiente' con resultado 'entregado' (flujo previo) se cierra con Entregado.
+export function isPickedUp(movement: { estado: string; resultado?: string | null }) {
+  return movement.estado === 'pendiente' && movement.resultado === 'recogido';
+}
+
 export function isDelivered(movement: { estado: string; resultado?: string | null }) {
   return movement.estado === 'pendiente' && movement.resultado === 'entregado';
 }
 
 export function movementStatusLabel(movement: { estado: string; resultado?: string | null }) {
-  return isDelivered(movement) ? 'entregado' : movement.estado;
+  return isDelivered(movement) ? 'entregado' : isPickedUp(movement) ? 'recogido' : movement.estado;
 }
 
 export function completeMovementWithAction<T extends MovementLike>(
@@ -59,16 +66,22 @@ export function completeMovementWithAction<T extends MovementLike>(
   const target = movements.find((movement) => movement.id === id);
   if (!target) return { ok: false, error: 'not_found' };
   if (target.estado !== 'pendiente') return { ok: false, error: 'already_completed' };
-  if (action === 'entregado' && target.resultado === 'entregado') return { ok: false, error: 'already_delivered' };
+  if (action === 'recogido') {
+    if (target.resultado === 'recogido') return { ok: false, error: 'already_picked_up' };
+    if (target.resultado === 'entregado') return { ok: false, error: 'already_delivered' };
+  } else if (target.resultado !== 'recogido' && target.resultado !== 'entregado') {
+    return { ok: false, error: 'not_picked_up' };
+  }
   const at = now.toISOString();
   const movimiento = (
-    action === 'entregado'
-      ? { ...target, resultado: 'entregado', entregado_por: completedBy,       entregado_en: at, nota_entrega: note, editado_en: at }
-            : { ...target, estado: 'completado', resultado: 'recogido', completado_por: completedBy, completado_en: at, nota_recogida: note, editado_en: at }
+    action === 'recogido'
+      ? { ...target, resultado: 'recogido', recogido_por: completedBy, recogido_en: at, nota_recogida: note, editado_en: at }
+      : { ...target, estado: 'completado', resultado: 'entregado', completado_por: completedBy, completado_en: at, entregado_por: completedBy, entregado_en: at, nota_entrega: note, editado_en: at }
   ) as T;
   return { ok: true, movimiento, movimientos: movements.map((movement) => (movement.id === id ? movimiento : movement)) };
 }
-// La ubicación actual del generador (campo `ubicacion`) pasa a ser el destino (entregado) o el origen (recogido).
+
+// La ubicación actual del generador (campo `ubicacion`) pasa a ser el destino (entregado, cierra el movimiento) o se mantiene en el origen (recogido).
 export function applyCompletionLocation<G extends { id: string; ubicacion?: unknown }>(
   generators: G[],
   movement: Pick<MovementLike, 'generador_id' | 'origen' | 'destino' | 'resultado'>,

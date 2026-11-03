@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { applyCompletionLocation, completeMovementWithAction, isDelivered, movementStatusLabel, parseCompletionAction, sanitizeCompletionNote, MAX_COMPLETION_NOTE_LENGTH } from './movement-completion.ts';
+import { applyCompletionLocation, completeMovementWithAction, isDelivered, isPickedUp, movementStatusLabel, parseCompletionAction, sanitizeCompletionNote, MAX_COMPLETION_NOTE_LENGTH } from './movement-completion.ts';
 
 const now = new Date('2026-10-16T09:30:00Z');
 const pending = (overrides = {}) => ({ id: 'm1', generador_id: 'g1', origen: 'Oficina', destino: 'Obra Norte', estado: 'pendiente', ...overrides });
@@ -12,41 +12,42 @@ test('parseCompletionAction solo acepta entregado o recogido', () => {
   for (const value of ['completado', '', null, undefined, 1, {}]) assert.equal(parseCompletionAction(value), null);
 });
 
-test('completar guarda acción, usuario y fecha sin tocar otros movimientos', () => {
+test('recogido es el primer paso: mantiene el movimiento activo y guarda quien/cuando', () => {
   const other = pending({ id: 'm2' });
   const result = completeMovementWithAction([pending(), other], 'm1', 'recogido', 'Transportista', now);
   assert.equal(result.ok, true);
-  assert.equal(result.movimiento.estado, 'completado');
-  assert.equal(result.movimiento.resultado, 'recogido');
-  assert.equal(result.movimiento.completado_por, 'Transportista');
-  assert.equal(result.movimiento.completado_en, now.toISOString());
-  assert.equal(result.movimientos[1], other);
-});
-
-test('entregado mantiene el movimiento activo y guarda quien/cuando; no se repite', () => {
-  const result = completeMovementWithAction([pending()], 'm1', 'entregado', 'Transportista', now);
-  assert.equal(result.ok, true);
   assert.equal(result.movimiento.estado, 'pendiente');
-  assert.equal(result.movimiento.resultado, 'entregado');
-  assert.equal(result.movimiento.entregado_por, 'Transportista');
-  assert.equal(result.movimiento.entregado_en, now.toISOString());
+  assert.equal(result.movimiento.resultado, 'recogido');
+  assert.equal(result.movimiento.recogido_por, 'Transportista');
+  assert.equal(result.movimiento.recogido_en, now.toISOString());
   assert.equal(result.movimiento.completado_en ?? null, null);
-  assert.equal(isDelivered(result.movimiento), true);
-  assert.equal(movementStatusLabel(result.movimiento), 'entregado');
-  assert.deepEqual(completeMovementWithAction(result.movimientos, 'm1', 'entregado', 'x', now), { ok: false, error: 'already_delivered' });
+  assert.equal(isPickedUp(result.movimiento), true);
+  assert.equal(movementStatusLabel(result.movimiento), 'recogido');
+  assert.equal(result.movimientos[1], other);
+  assert.deepEqual(completeMovementWithAction(result.movimientos, 'm1', 'recogido', 'x', now), { ok: false, error: 'already_picked_up' });
 });
 
-test('recogido tras entregado completa el movimiento y conserva la entrega', () => {
-  const delivered = completeMovementWithAction([pending()], 'm1', 'entregado', 'Ana', now).movimientos;
+test('entregado exige recogido antes y cierra el movimiento', () => {
+  assert.deepEqual(completeMovementWithAction([pending()], 'm1', 'entregado', 'x', now), { ok: false, error: 'not_picked_up' });
+  const picked = completeMovementWithAction([pending()], 'm1', 'recogido', 'Ana', now).movimientos;
   const later = new Date('2026-10-17T10:00:00Z');
-  const result = completeMovementWithAction(delivered, 'm1', 'recogido', 'Luis', later);
+  const result = completeMovementWithAction(picked, 'm1', 'entregado', 'Luis', later);
   assert.equal(result.ok, true);
   assert.equal(result.movimiento.estado, 'completado');
-  assert.equal(result.movimiento.resultado, 'recogido');
-  assert.equal(result.movimiento.entregado_por, 'Ana');
+  assert.equal(result.movimiento.resultado, 'entregado');
+  assert.equal(result.movimiento.recogido_por, 'Ana');
   assert.equal(result.movimiento.completado_por, 'Luis');
-  assert.equal(isDelivered(result.movimiento), false);
+  assert.equal(result.movimiento.entregado_por, 'Luis');
+  assert.equal(result.movimiento.completado_en, later.toISOString());
   assert.equal(movementStatusLabel(result.movimiento), 'completado');
+});
+
+test('compatibilidad: un movimiento antiguo pendiente+entregado se cierra con Entregado y no admite Recogido', () => {
+  const legacy = pending({ resultado: 'entregado', entregado_por: 'Ana' });
+  assert.equal(isDelivered(legacy), true);
+  assert.deepEqual(completeMovementWithAction([legacy], 'm1', 'recogido', 'x', now), { ok: false, error: 'already_delivered' });
+  const result = completeMovementWithAction([legacy], 'm1', 'entregado', 'Luis', now);
+  assert.equal(result.movimiento.estado, 'completado');
 });
 
 test('la migracion anade columnas y no toca app_state_revision', () => {
@@ -59,8 +60,8 @@ test('la migracion anade columnas y no toca app_state_revision', () => {
 
 test('movimiento inexistente o ya completado se rechaza', () => {
   assert.deepEqual(completeMovementWithAction([pending()], 'zz', 'recogido', 'x', now), { ok: false, error: 'not_found' });
-  const done = pending({ estado: 'completado', resultado: 'recogido' });
-  assert.deepEqual(completeMovementWithAction([done], 'm1', 'recogido', 'x', now), { ok: false, error: 'already_completed' });
+  const done = pending({ estado: 'completado', resultado: 'entregado' });
+  assert.deepEqual(completeMovementWithAction([done], 'm1', 'entregado', 'x', now), { ok: false, error: 'already_completed' });
 });
 
 test('al completar, la ubicación actual del generador pasa a destino (entregado) u origen (recogido)', () => {
@@ -103,15 +104,23 @@ test('sanitizeCompletionNote limpia, recorta a 500 y devuelve null si esta vacia
   assert.equal(sanitizeCompletionNote('<script>x</script>'), '<script>x</script>');
 });
 
-test('cada paso guarda su propia nota y recogido conserva la de entrega', () => {
-  const delivered = completeMovementWithAction([pending()], 'm1', 'entregado', 'Ana', now, 'Sin llave').movimientos;
-  assert.equal(delivered[0].nota_entrega, 'Sin llave');
-  assert.equal(delivered[0].nota_recogida ?? null, null);
-  const done = completeMovementWithAction(delivered, 'm1', 'recogido', 'Luis', now, 'Golpe en carcasa');
-  assert.equal(done.movimiento.nota_entrega, 'Sin llave');
-  assert.equal(done.movimiento.nota_recogida, 'Golpe en carcasa');
-  assert.equal(completeMovementWithAction([pending()], 'm1', 'recogido', 'L', now).movimiento.nota_recogida, null);
-  assert.deepEqual(completeMovementWithAction(delivered, 'm1', 'entregado', 'x', now, 'otra'), { ok: false, error: 'already_delivered' });
+test('cada paso guarda su propia nota y entregado conserva la de recogida', () => {
+  const picked = completeMovementWithAction([pending()], 'm1', 'recogido', 'Ana', now, 'Sin llave').movimientos;
+  assert.equal(picked[0].nota_recogida, 'Sin llave');
+  assert.equal(picked[0].nota_entrega ?? null, null);
+  const done = completeMovementWithAction(picked, 'm1', 'entregado', 'Luis', now, 'Golpe en carcasa');
+  assert.equal(done.movimiento.nota_recogida, 'Sin llave');
+  assert.equal(done.movimiento.nota_entrega, 'Golpe en carcasa');
+  assert.equal(completeMovementWithAction(picked, 'm1', 'entregado', 'L', now).movimiento.nota_entrega, null);
+  assert.deepEqual(completeMovementWithAction(picked, 'm1', 'recogido', 'x', now, 'otra'), { ok: false, error: 'already_picked_up' });
+});
+
+test('la migracion del paso de recogida anade columnas y no toca app_state_revision', () => {
+  const sql = readFileSync(new URL('../../supabase/migrations/20261030120000_movement_pickup_step.sql', import.meta.url), 'utf8');
+  assert.match(sql, /recogido_en/);
+  assert.match(sql, /recogido_por/);
+  assert.match(sql, /replace_app_state\(\s*p_usuarios jsonb,[\s\S]*p_expected_revision bigint/);
+  assert.doesNotMatch(sql, /alter table[^;]*app_state_revision/i);
 });
 
 test('la ruta sanea la nota, la pasa al push y la migracion añade las columnas', () => {
