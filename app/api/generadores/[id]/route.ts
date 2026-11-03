@@ -5,6 +5,10 @@ import { hasGeneratorMovements } from '@/app/lib/generator-deletion';
 import { getStore, setStore } from '@/app/lib/store';
 import { normalizeLocation } from '@/app/lib/generator-location';
 
+function madridToday() {
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Madrid' }).format(new Date());
+}
+
 export const PATCH = withStoreErrorHandling(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   if (!(await getEditorFromRequest(request))) {
     return NextResponse.json({ error: 'Necesitas una sesión de editor.' }, { status: 403 });
@@ -22,7 +26,7 @@ export const PATCH = withStoreErrorHandling(async (request: Request, { params }:
   }
 
   const ubicacion = normalizeLocation(body.ubicacion);
-  const generadores = state.generadores.map((generator) => (generator.id === id ? { ...generator, ubicacion } : generator));
+  const generadores = state.generadores.map((generator) => (generator.id === id ? { ...generator, ubicacion, ubicacion_desde: madridToday() } : generator));
   await setStore({ ...state, generadores });
   return NextResponse.json({ ok: true, generador: generadores.find((generator) => generator.id === id) });
 }, 'generadores');

@@ -85,3 +85,15 @@ test('locationOnDate: recogido (en transito) sigue en el origen y entregado deja
   assert.equal(locationOnDate(generator, [{ ...base, resultado: 'recogido' }], '2026-10-29'), 'Oficina');
   assert.equal(locationOnDate({ ...generator, ubicacion: 'Mutua' }, [{ ...base, estado: 'completado', resultado: 'entregado' }], '2026-10-29'), 'Mutua');
 });
+
+test('la etiqueta manual rige desde su fecha, hasta que un movimiento posterior se aplica', () => {
+  const g = { id: 'g1', ubicacion: 'CIMA', ubicacion_desde: '2026-11-03' };
+  const m = (fecha, origen, destino, extra = {}) => ({ id: fecha, generador_id: 'g1', fecha, origen, destino, estado: 'completado', resultado: 'entregado', ...extra });
+  const moves = [m('2026-10-28', 'Oficina', 'Mutua Terrassa')];
+  assert.equal(locationOnDate(g, moves, '2026-11-02'), 'Mutua Terrassa');
+  assert.equal(locationOnDate(g, moves, '2026-11-03'), 'CIMA');
+  assert.equal(locationOnDate(g, moves, '2026-11-10'), 'CIMA');
+  const later = [...moves, m('2026-11-06', 'CIMA', 'Puerto', { estado: 'pendiente', resultado: null })];
+  assert.equal(locationOnDate(g, later, '2026-11-05'), 'CIMA');
+  assert.equal(locationOnDate(g, later, '2026-11-07'), 'Puerto');
+});
