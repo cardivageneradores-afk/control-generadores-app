@@ -28,6 +28,7 @@ interface Generator {
   codigo: string;
   modelo: string;
   ubicacion: string;
+  ubicacion_desde?: string | null;
   estado: GeneratorStatus;
 }
 

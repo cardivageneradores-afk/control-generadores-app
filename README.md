@@ -57,6 +57,8 @@ Permisos: `POST /api/movimientos/[id]/completar` acepta sesión de editor o lect
 
 **Migración**: aplica en el SQL Editor, en este orden, `supabase/migrations/20261016120000_movement_completion_result.sql` y después `supabase/migrations/20261019150000_movement_delivered_step.sql` (columnas de entrega; idempotentes). Antes de la segunda, la entrega funciona pero no se conserva quién/cuándo. Detalle de la primera: aplica `supabase/migrations/20261016120000_movement_completion_result.sql` en el SQL Editor de Supabase (idempotente) antes de usar los botones; sin ella la ubicación no se conserva tras recargar.
 
+**Etiqueta de ubicación editable**: al cambiarla se guarda la fecha (`ubicacion_desde`) y rige desde ese día hasta que se aplique un movimiento posterior; los días anteriores no cambian. Requiere aplicar `supabase/migrations/20261103120000_generator_location_since.sql` (SQL Editor, idempotente, tras la anterior).
+
 **Migración del flujo Recogido → Entregado**: aplica también `supabase/migrations/20261030120000_movement_pickup_step.sql` (SQL Editor, idempotente, tras las anteriores; añade `recogido_en`/`recogido_por`). Los movimientos antiguos «entregados» pendientes se cierran con Entregado; los completados con Recogido siguen contando como devueltos al origen.
 
 ## Notificaciones push a editores

@@ -38,16 +38,21 @@ function isApplied(movement: TimelineMovement, date: string) {
 // tras un movimiento está en el destino (o en el origen si se marcó «Recogido»), hasta el siguiente;
 // antes del primer movimiento manda la ubicación actual (salvo que ya esté iniciado: entonces, su origen). Sin movimientos (o tras uno ya completado) manda la ubicación actual.
 export function locationOnDate(
-  generator: { id: string; ubicacion?: unknown },
+  generator: { id: string; ubicacion?: unknown; ubicacion_desde?: string | null },
   movements: TimelineMovement[],
   date: string,
 ): string {
   const own = movements.filter((movement) => movement.generador_id === generator.id).sort(compareMovements);
+  // Ubicación fijada a mano en la etiqueta: rige desde esa fecha hasta que un movimiento posterior se aplique.
+  const since = generator.ubicacion_desde;
+  if (since && date >= since && !own.some((movement) => movement.fecha > since && isApplied(movement, date))) {
+    return fixedLocation(generator);
+  }
   const previousIndex = own.reduce((found, movement, index) => (isApplied(movement, date) ? index : found), -1);
   if (previousIndex >= 0) {
     const previous = own[previousIndex];
     const isLast = previousIndex === own.length - 1;
-    if (isLast && previous.estado === 'completado') return fixedLocation(generator);
+    if (isLast && previous.estado === 'completado' && !(since && date < since)) return fixedLocation(generator);
     return normalizeLocation(previous.resultado === 'recogido' ? previous.origen : previous.destino);
   }
   const next = own.find((movement) => movement.fecha > date || (movement.fecha === date && !isApplied(movement, date)));
