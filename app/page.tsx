@@ -149,7 +149,6 @@ export default function Page() {
   const [toast, setToast] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [stateError, setStateError] = useState<string | null>(null);
-  const [isDesktop, setIsDesktop] = useState(false);
   const [isGeneratorsOpen, setIsGeneratorsOpen] = useState(false);
   const [login, setLogin] = useState({ email: 'admin@empresa.com', password: 'admin123' });
   const [loginError, setLoginError] = useState('');
@@ -189,17 +188,6 @@ export default function Page() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(min-width: 741px) and (min-height: 501px), (min-width: 741px) and (pointer: fine)');
-    const updateViewport = () => {
-      setIsDesktop(mediaQuery.matches);
-      if (!mediaQuery.matches) setIsGeneratorsOpen(false);
-    };
-
-    updateViewport();
-    mediaQuery.addEventListener('change', updateViewport);
-    return () => mediaQuery.removeEventListener('change', updateViewport);
-  }, []);
 
   useEffect(() => {
     // El rol se lee de la base de datos en cada petición; el cliente lo refresca al volver a la pestaña.
@@ -658,7 +646,7 @@ export default function Page() {
             <p className="section-label generator-section-title">Generadores</p>
             <details
               className="generator-disclosure"
-              open={isDesktop || isGeneratorsOpen}
+              open={isGeneratorsOpen}
               onToggle={(event) => setIsGeneratorsOpen(event.currentTarget.open)}
             >
               <summary className="section-label generator-disclosure-summary">Generadores</summary>
