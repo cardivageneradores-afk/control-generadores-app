@@ -45,6 +45,15 @@ export function getMovementDetailFields(movement: Movement): SummaryField[] {
   ];
 }
 
+export function getMovementStepNotes(movement: Movement): SummaryField[] {
+  const recogida = movement.nota_recogida?.trim();
+  const entrega = movement.nota_entrega?.trim();
+  return [
+    ...(recogida ? [{ label: 'Nota de recogida', value: recogida }] : []),
+    ...(entrega ? [{ label: 'Nota de entrega', value: entrega }] : []),
+  ];
+}
+
 function getSummaryFields(movement: Movement, generator?: Generator): SummaryField[] {
   const details = getMovementDetailFields(movement);
   return [

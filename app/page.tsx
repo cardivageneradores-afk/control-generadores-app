@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { Fragment, type KeyboardEvent, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, ChevronLeft, ChevronRight, Copy, LogOut, Mail, Pencil, Plus, Trash2, Users } from 'lucide-react';
-import { buildMovementSummary, getMovementDetailFields } from './lib/movement-summary';
+import { buildMovementSummary, getMovementDetailFields, getMovementStepNotes } from './lib/movement-summary';
 import { filterMovementsByWeek, getWeekDates } from './lib/calendar-week';
 import PushToggle from './push-toggle';
 import { invalidRoleMessage } from './lib/roles';
@@ -811,6 +811,11 @@ export default function Page() {
                                   {movement.notas?.trim() ? (
                                     <p className="calendar-comments">{movement.notas.trim()}</p>
                                   ) : null}
+                                  {getMovementStepNotes(movement).map(({ label, value }) => (
+                                    <p key={label} className="calendar-comments calendar-step-note">
+                                      <strong>{label}:</strong> {value}
+                                    </p>
+                                  ))}
                                 </article>
                               );
                             })}

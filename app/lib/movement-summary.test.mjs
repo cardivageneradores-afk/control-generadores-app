@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildMovementSummary, getMovementDetailFields } from './movement-summary.ts';
+import { buildMovementSummary, getMovementDetailFields, getMovementStepNotes } from './movement-summary.ts';
+
 
 const movement = {
   id: 'm-1',
@@ -75,4 +76,16 @@ test('supports a custom heading and empty message', () => {
   assert.match(summary.text, /No hay movimientos esta semana/);
   assert.match(summary.html, /<h2>Detalle de movimientos<\/h2>/);
   assert.match(summary.html, /No hay movimientos esta semana/);
+});
+
+test('getMovementStepNotes distinguishes pickup and delivery notes and skips blanks', () => {
+  assert.deepEqual(getMovementStepNotes(movement), []);
+  assert.deepEqual(
+    getMovementStepNotes({ ...movement, nota_recogida: '  Puerta B <b>  ', nota_entrega: 'Entregado a Luis' }),
+    [
+      { label: 'Nota de recogida', value: 'Puerta B <b>' },
+      { label: 'Nota de entrega', value: 'Entregado a Luis' },
+    ],
+  );
+  assert.deepEqual(getMovementStepNotes({ ...movement, nota_recogida: '   ', nota_entrega: null }), []);
 });

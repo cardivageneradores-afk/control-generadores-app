@@ -1104,6 +1104,11 @@ textarea:focus-visible {
   font-size: 9px;
 }
 
+.calendar-step-note {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .movement-list {
   border-color: rgba(129, 144, 160, 0.2);
 }
